@@ -99,7 +99,8 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 - Navigation: 5 bottom tabs — Today, Train (logger, history, plan), Food, Progress (strength + body), More (settings).
 - Dark theme by default (gym lighting, OLED battery). Inputs are 16px so iOS doesn't zoom on focus.
 - Rest defaults: 3 min main lifts (`is_main_lift`), 2 min other compounds, 1 min isolation; 1/2/3 min buttons in timer.
-- Starter days for the owner's split are seed data the owner edits, NOT app logic. Phase 5 planner generates days
+- Starter days (`src/lib/starterSplit.ts`) are data applied once by a button; afterwards they're ordinary user rows.
+  They are NOT app logic. Phase 5 planner generates days
   for everyone else; no hardcoded pre-fill in the product.
 - Local-first saving pulled forward from Phase 6 into Phase 2 (gym Wi-Fi; retrofitting the logger later is costly).
   Phase 6 still adds offline app shell (service worker), install, CSV export.
@@ -121,6 +122,9 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 - Env vars: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` in `.env.local` (git-ignored). See `.env.example`.
 - Commands: `npm run dev`, `npm run build`, `npm test`, `npm run lint`, `npm run test:db` (RLS tests on local Postgres),
   `POSTGREST_BIN=… npm run test:sync` (sync engine against real PostgREST + RLS).
+- E2E (cloud sessions): `scripts/e2e-stack.sh` (needs POSTGREST_BIN; download postgrest-v12 linux-static-x64 from
+  GitHub releases) → build with `VITE_SUPABASE_URL=http://localhost:54321` → drive with Playwright (global install,
+  Chromium at /opt/pw-browsers) using a session JWT signed with the script's secret.
 - Data access: screens read with `useLiveQuery(() => db.<table>…)` and write ONLY via `useData().store`
   (`insert` / `update` / `remove`). Never call `supabase.from()` for user data from screens — sync owns that.
   UI must filter `deleted_at == null`. New synced tables: add to `types.ts` (Tables, SYNC_ORDER, OWNER_COLUMN)
@@ -141,7 +145,8 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] 2.1 Exercise library migration (753 exercises, stretches excluded, stable md5 ids, re-runnable)
   - [x] Owner: run `20261015000000_seed_exercises.sql` in Supabase SQL Editor (753 rows confirmed)
   - [x] 2.2 Local-first data layer (`src/data`: Dexie per-user DB, outbox, SyncEngine push/pull, SyncManager, sync status card)
-  - [ ] 2.3 Day setup (starter days pre-filled as editable data) + "Main gym" equipment profile
+  - [x] 2.3 Week setup: "Use starter split" / empty week (atomic), day editor (name, rest day, sets, reps, main lift,
+        reorder, remove), exercise picker (search, muscle chips, only-my-gym), default "Main gym" profile
   - [ ] 2.4 Logger screen
   - [ ] 2.5 Swap + "Not at this gym"
   - [ ] 2.6 Rest timer, wake lock, warm-ups

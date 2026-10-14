@@ -48,7 +48,8 @@ export class SyncManager {
 
   /** Call after every local write. */
   requestSync = () => {
-    void this.refreshCounts()
+    // setTimeout runs outside any Dexie transaction the write may be part of.
+    setTimeout(() => void this.refreshCounts(), 0)
     clearTimeout(this.debounce)
     this.debounce = setTimeout(() => void this.syncNow(), DEBOUNCE_MS)
   }
