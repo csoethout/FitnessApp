@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { useAuth } from '@/auth/AuthProvider'
-import { supabase, supabaseConfigured } from '@/lib/supabase'
+import { supabase, supabaseConfigured, supabaseUrlWarning } from '@/lib/supabase'
 
 const inputClass =
   'min-h-12 w-full rounded-xl border border-border bg-surface-2 px-4 text-base outline-none focus:border-accent'
@@ -42,6 +42,10 @@ export function SignInScreen() {
           Supabase is not configured. Copy <code>.env.example</code> to <code>.env.local</code> and fill in your
           project URL and anon key.
         </p>
+      )}
+
+      {supabaseUrlWarning && (
+        <p className="mb-4 rounded-xl border border-danger/50 p-3 text-sm text-danger">{supabaseUrlWarning}</p>
       )}
 
       <form onSubmit={onSubmit} className="space-y-3">
