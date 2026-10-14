@@ -9,7 +9,7 @@ This file is the source of truth between sessions: read it first, update it as y
 - Ideas outside the current phase go to **Backlog**, not into code.
 - Flag anything that adds cost, creates security risk, or is hard to change later.
 - Owner is a coder (Python/R/SQL), new to TypeScript and weak at UX: explain choices in plain language.
-- Branch: `claude/fitness-tracking-pwa-xd1s3z`.
+- Branch: `claude/fitness-tracking-pwa-xd1s3z`. Live: https://fitnessapp.cnsoethout.workers.dev (auto-deploys on push).
 
 ## Hard constraints
 1. Free tiers only. Say so before suggesting anything that costs money.
@@ -117,7 +117,8 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] Supabase client + email/password sign-in + protected routes
   - [x] Cloudflare config (`wrangler.jsonc`, SPA fallback) + deploy guide (`docs/SETUP.md`)
   - [x] Owner: Supabase project created, migration run, user created
-  - [ ] Owner: Cloudflare Worker `fitnessapp` connected, build variables set → live workers.dev URL
+  - [x] Owner: Cloudflare Worker `fitnessapp` connected, build variables set → live at https://fitnessapp.cnsoethout.workers.dev
+  - [ ] Owner: set Supabase Site URL to the live URL
   - [ ] Owner: run the Phase 1 test checklist in `docs/SETUP.md` on the iPhone
 - [ ] **Phase 2: workout logging** (seed exercises, logger screen, swaps, rest timer, local-first save)
 - [ ] **Phase 3: progress views and charts**
@@ -132,4 +133,6 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 - AI: free-text week check-in ("out of town Fri–Sun, hotel gym")
 - Apple Health / Bluetooth scale sync (not possible from a PWA on iOS; needs native app, $99/yr)
 - Walk/step tracking beyond manual cardio entries; reminders/notifications; supersets; plate calculator
+- Custom domain (≈$10/yr via Cloudflare Registrar — costs money, owner must approve)
+- Final app name / branding ("Lift Log" is a placeholder)
 - Friends/sharing (needs custom SMTP, e.g. Resend free tier); importing old data
