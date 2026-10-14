@@ -98,6 +98,14 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   template vs weekly instance, `user_id` on every row.
 - Navigation: 5 bottom tabs — Today, Train (logger, history, plan), Food, Progress (strength + body), More (settings).
 - Dark theme by default (gym lighting, OLED battery). Inputs are 16px so iOS doesn't zoom on focus.
+- Rest defaults: 3 min main lifts (`is_main_lift`), 2 min other compounds, 1 min isolation; 1/2/3 min buttons in timer.
+- Starter days for the owner's split are seed data the owner edits, NOT app logic. Phase 5 planner generates days
+  for everyone else; no hardcoded pre-fill in the product.
+- Local-first saving pulled forward from Phase 6 into Phase 2 (gym Wi-Fi; retrofitting the logger later is costly).
+  Phase 6 still adds offline app shell (service worker), install, CSV export.
+- Phase 2 pre-fills sets from the last session; automatic progression targets arrive with the Phase 5 planner.
+- Logger UX: only the current set is expanded (big steppers + ✓); done sets collapse to one line; optional
+  effort/"couldn't finish" row after ✓; timer bar at bottom. iOS can't alert when the PWA is backgrounded.
 - Allowed values are text + CHECK constraints, not Postgres enums (easier to extend).
 - Supabase "publishable"/anon key is safe in the frontend because RLS protects data. The service-role key is
   never in frontend code or the repo.
@@ -120,7 +128,15 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] Owner: Cloudflare Worker `fitnessapp` connected, build variables set → live at https://fitnessapp.cnsoethout.workers.dev
   - [ ] Owner: set Supabase Site URL to the live URL
   - [ ] Owner: run the Phase 1 test checklist in `docs/SETUP.md` on the iPhone
-- [ ] **Phase 2: workout logging** (seed exercises, logger screen, swaps, rest timer, local-first save)
+- [ ] **Phase 2: workout logging**
+  - [x] 2.1 Exercise library migration (753 exercises, stretches excluded, stable md5 ids, re-runnable)
+  - [ ] Owner: run `20261015000000_seed_exercises.sql` in Supabase SQL Editor
+  - [ ] 2.2 Local-first data layer (Dexie + sync queue to Supabase)
+  - [ ] 2.3 Day setup (starter days pre-filled as editable data) + "Main gym" equipment profile
+  - [ ] 2.4 Logger screen
+  - [ ] 2.5 Swap + "Not at this gym"
+  - [ ] 2.6 Rest timer, wake lock, warm-ups
+  - [ ] 2.7 Finish summary + workout history
 - [ ] **Phase 3: progress views and charts**
 - [ ] **Phase 4: body weight (+ body fat %, muscle mass) and food/macro tracking**
 - [ ] **Phase 5: rules-based planner, Plan my week, equipment profiles, cardio logging**

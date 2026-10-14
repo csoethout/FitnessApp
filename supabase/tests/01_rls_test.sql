@@ -37,11 +37,14 @@ insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'a@example.com'),
   ('bbbbbbbb-0000-0000-0000-000000000002', 'b@example.com');
 insert into public.exercises (id, source, source_id, name, equipment, mechanic)
-  values ('eeeeeeee-0000-0000-0000-000000000001', 'free-exercise-db', 'Barbell_Squat', 'Barbell Squat', 'barbell', 'compound');
+  values ('eeeeeeee-0000-0000-0000-000000000001', 'free-exercise-db', 'Test_Squat', 'Test Squat', 'barbell', 'compound');
 insert into public.foods (id, source, source_id, name, kcal, protein_g)
   values ('ffffffff-0000-0000-0000-000000000001', 'usda', '171077', 'Chicken breast', 165, 31);
 
 select tests.eq((select count(*) from public.profiles), 2, 'profile auto-created for each new user');
+select tests.eq((select (count(*) > 700)::int from public.exercises
+                 where source = 'free-exercise-db' and id = md5('free-exercise-db:' || source_id)::uuid),
+                1, 'exercise library seeded with stable ids');
 
 -- ---------------- User A creates data ----------------
 set role authenticated;
@@ -65,7 +68,7 @@ insert into public.food_log_entries (logged_on, name, kcal_per_serving, food_id)
 
 select tests.eq((select count(*) from public.profiles), 1, 'A sees only their own profile');
 select tests.eq((select count(*) from public.sets), 1, 'A sees their set');
-select tests.eq((select count(*) from public.exercises), 2, 'A sees shared + own exercises');
+select tests.eq((select count(*) from public.exercises where owner_id is not null), 1, 'A sees own private exercise');
 
 -- updated_at trigger
 update public.sets set reps = 9 where id = 'a0000000-0000-0000-0000-0000000000c1';
@@ -79,7 +82,8 @@ select tests.eq((select count(*) from public.workouts), 0, 'B cannot see A worko
 select tests.eq((select count(*) from public.sets), 0, 'B cannot see A sets');
 select tests.eq((select count(*) from public.body_measurements), 0, 'B cannot see A weigh-ins');
 select tests.eq((select count(*) from public.food_log_entries), 0, 'B cannot see A food log');
-select tests.eq((select count(*) from public.exercises), 1, 'B sees only the shared exercise');
+select tests.eq((select count(*) from public.exercises where owner_id is not null), 0, 'B cannot see A private exercise');
+select tests.eq((select (count(*) > 700)::int from public.exercises), 1, 'B can read the shared exercise library');
 select tests.eq((select count(*) from public.foods), 1, 'B sees only the shared food');
 
 with u as (update public.sets set reps = 1 returning 1) select tests.eq((select count(*) from u), 0, 'B cannot update A sets');
