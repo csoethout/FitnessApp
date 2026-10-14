@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useData } from './DataProvider'
-import type { Exercise, PlanTemplateDay, PlanTemplateExercise } from './types'
+import type { Exercise, PlanTemplateDay, PlanTemplateExercise, WorkoutExercise, WorkoutSet } from './types'
+import { activeWorkout, lastPerformance } from './workouts'
 
 const live = <T extends { deleted_at: string | null }>(rows: T[]) => rows.filter((r) => !r.deleted_at)
 
@@ -40,4 +41,35 @@ export function useDayExerciseCounts(dayIds: string[]) {
     for (const r of rows) counts.set(r.template_day_id, (counts.get(r.template_day_id) ?? 0) + 1)
     return counts
   }, [db, dayIds.join(',')])
+}
+
+export type WorkoutItem = {
+  we: WorkoutExercise
+  exercise: Exercise | undefined
+  sets: WorkoutSet[]
+  last: WorkoutSet[]
+}
+
+/** A workout with its exercises (ordered), their sets (ordered), and what was done last time. */
+export function useWorkout(workoutId: string | undefined) {
+  const { db } = useData()
+  return useLiveQuery(async () => {
+    if (!workoutId) return null
+    const workout = await db.workouts.get(workoutId)
+    if (!workout || workout.deleted_at) return null
+    const wes = live(await db.workout_exercises.where('workout_id').equals(workoutId).toArray()).sort((a, b) => a.position - b.position)
+    const exercises = await db.exercises.bulkGet(wes.map((we) => we.exercise_id))
+    const items: WorkoutItem[] = []
+    for (const [i, we] of wes.entries()) {
+      const sets = live(await db.sets.where('workout_exercise_id').equals(we.id).toArray()).sort((a, b) => a.position - b.position)
+      items.push({ we, exercise: exercises[i], sets, last: await lastPerformance(db, we.exercise_id, workoutId) })
+    }
+    return { workout, items }
+  }, [db, workoutId])
+}
+
+/** The unfinished workout, if one is in progress. */
+export function useActiveWorkout() {
+  const { db } = useData()
+  return useLiveQuery(() => activeWorkout(db), [db])
 }

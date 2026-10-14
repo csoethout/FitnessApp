@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Placeholder } from '@/components/Placeholder'
 import { ScreenHeader } from '@/components/ScreenHeader'
+import { TodayWorkoutCard } from '@/components/TodayWorkoutCard'
 
 export function TodayScreen() {
   const [date] = useState(() =>
@@ -10,7 +11,7 @@ export function TodayScreen() {
     <>
       <ScreenHeader title="Today" subtitle={date} />
       <div className="space-y-3">
-        <Placeholder phase={2}>Today's workout and a Start button</Placeholder>
+        <TodayWorkoutCard />
         <Placeholder phase={4}>Calories and protein left, one-tap weigh-in</Placeholder>
       </div>
     </>

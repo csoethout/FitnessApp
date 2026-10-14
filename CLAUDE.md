@@ -104,7 +104,9 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   for everyone else; no hardcoded pre-fill in the product.
 - Local-first saving pulled forward from Phase 6 into Phase 2 (gym Wi-Fi; retrofitting the logger later is costly).
   Phase 6 still adds offline app shell (service worker), install, CSV export.
-- Phase 2 pre-fills sets from the last session; automatic progression targets arrive with the Phase 5 planner.
+- Only one workout can be in progress; starting another offers to resume it. Finishing removes sets never done
+  and exercises with no completed sets.
+- Phase 2 pre-fills sets from the last session (same exercise, any day); automatic progression targets arrive with the Phase 5 planner.
 - Sync: one IndexedDB per user (`liftlog-<uid>`), deleted on sign-out (after warning about unsynced changes).
   Server owns `updated_at`; pull uses keyset (updated_at, id); rows with pending local edits are never overwritten;
   server-rejected rows are marked failed (shown in More) instead of blocking the queue. Syncs on write (debounced),
@@ -147,7 +149,9 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] 2.2 Local-first data layer (`src/data`: Dexie per-user DB, outbox, SyncEngine push/pull, SyncManager, sync status card)
   - [x] 2.3 Week setup: "Use starter split" / empty week (atomic), day editor (name, rest day, sets, reps, main lift,
         reorder, remove), exercise picker (search, muscle chips, only-my-gym), default "Main gym" profile
-  - [ ] 2.4 Logger screen
+  - [x] 2.4 Logger: Start/Resume (Today card, Train, day editor, empty workout), full-screen `/workout/:id`,
+        one expanded set, ✓ logs pre-filled values, tap number to type, changes carry to later pending sets,
+        optional RIR / couldn't-finish row, warm-up toggle, add set/exercise, finish (drops undone sets), delete
   - [ ] 2.5 Swap + "Not at this gym"
   - [ ] 2.6 Rest timer, wake lock, warm-ups
   - [ ] 2.7 Finish summary + workout history

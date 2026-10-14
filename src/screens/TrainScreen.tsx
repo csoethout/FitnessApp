@@ -2,8 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { Placeholder } from '@/components/Placeholder'
 import { ScreenHeader } from '@/components/ScreenHeader'
+import { TodayWorkoutCard } from '@/components/TodayWorkoutCard'
 import { useData } from '@/data/DataProvider'
 import { useActiveWeek, useDayExerciseCounts } from '@/data/queries'
 import { applyBlankWeek, applyStarterSplit } from '@/data/setup'
@@ -25,6 +25,7 @@ function WeekOverview({ days }: { days: NonNullable<ReturnType<typeof useActiveW
   const [today] = useState(() => new Date().getDay())
   return (
     <div className="space-y-3">
+      <TodayWorkoutCard />
       <ul className="overflow-hidden rounded-2xl border border-border bg-surface">
         {days.map((d) => (
           <li key={d.id} className="border-b border-border last:border-b-0">
@@ -42,7 +43,6 @@ function WeekOverview({ days }: { days: NonNullable<ReturnType<typeof useActiveW
         ))}
       </ul>
       <p className="px-1 text-xs text-muted">Tap a day to change its name or exercises.</p>
-      <Placeholder phase={2}>Start workout (next step)</Placeholder>
     </div>
   )
 }

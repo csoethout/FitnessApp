@@ -5,6 +5,7 @@ import { ExercisePicker } from '@/components/ExercisePicker'
 import { Stepper } from '@/components/Stepper'
 import { useData } from '@/data/DataProvider'
 import { useTemplateDay, type DayExercise } from '@/data/queries'
+import { useStartWorkout } from '@/data/useStartWorkout'
 import type { Exercise } from '@/data/types'
 import { formatRest, WEEKDAYS } from '@/lib/dates'
 import { defaultRepRange, defaultRestSeconds } from '@/lib/training'
@@ -16,6 +17,7 @@ export function DayEditorScreen() {
   const { store } = useData()
   const [picking, setPicking] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
+  const start = useStartWorkout()
   const usedIds = useMemo(() => new Set(data?.items.map((it) => it.exercise_id)), [data])
 
   if (data === undefined) return null
@@ -70,6 +72,15 @@ export function DayEditorScreen() {
 
       {!day.is_rest && (
         <>
+          {items.length > 0 && (
+            <button
+              type="button"
+              onClick={() => void start(day.id, day.name)}
+              className="mb-4 min-h-14 w-full rounded-xl bg-accent text-lg font-semibold text-accent-ink"
+            >
+              Start this workout
+            </button>
+          )}
           <ul className="space-y-2">
             {items.map((item, i) => (
               <ExerciseRow
@@ -86,7 +97,7 @@ export function DayEditorScreen() {
           <button
             type="button"
             onClick={() => setPicking(true)}
-            className="mt-4 min-h-14 w-full rounded-xl bg-accent font-semibold text-accent-ink"
+            className="mt-4 min-h-14 w-full rounded-xl border border-dashed border-border text-muted"
           >
             + Add exercise
           </button>

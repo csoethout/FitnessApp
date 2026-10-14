@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, RouterProvider } from 'react-router'
+import { createBrowserRouter, Outlet, RouterProvider } from 'react-router'
 import { AuthProvider } from '@/auth/AuthProvider'
 import { RequireAuth } from '@/auth/RequireAuth'
 import { AppLayout } from '@/components/AppLayout'
@@ -12,6 +12,7 @@ import { ProgressScreen } from '@/screens/ProgressScreen'
 import { SignInScreen } from '@/screens/SignInScreen'
 import { TodayScreen } from '@/screens/TodayScreen'
 import { TrainScreen } from '@/screens/TrainScreen'
+import { WorkoutScreen } from '@/screens/WorkoutScreen'
 import './index.css'
 
 const router = createBrowserRouter([
@@ -22,16 +23,23 @@ const router = createBrowserRouter([
       {
         element: (
           <DataProvider>
-            <AppLayout />
+            <Outlet />
           </DataProvider>
         ),
         children: [
+          // Full-screen logger: no tab bar, so every pixel goes to the sets.
+          { path: '/workout/:workoutId', element: <WorkoutScreen /> },
+          {
+            element: <AppLayout />,
+            children: [
           { path: '/', element: <TodayScreen /> },
           { path: '/train', element: <TrainScreen /> },
           { path: '/train/day/:dayId', element: <DayEditorScreen /> },
           { path: '/food', element: <FoodScreen /> },
           { path: '/progress', element: <ProgressScreen /> },
           { path: '/more', element: <MoreScreen /> },
+            ],
+          },
         ],
       },
     ],
