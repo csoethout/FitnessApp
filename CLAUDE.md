@@ -95,6 +95,9 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 - Email + password auth, **invite-only** (sign-ups disabled in Supabase; users added from dashboard).
 - Hard to change later (deliberate): client UUIDs + soft deletes, kg storage, food log macro snapshots,
   template vs weekly instance, `user_id` on every row.
+- Navigation: 5 bottom tabs — Today, Train (logger, history, plan), Food, Progress (strength + body), More (settings).
+- Dark theme by default (gym lighting, OLED battery). Inputs are 16px so iOS doesn't zoom on focus.
+- Allowed values are text + CHECK constraints, not Postgres enums (easier to extend).
 - Supabase "publishable"/anon key is safe in the frontend because RLS protects data. The service-role key is
   never in frontend code or the repo.
 
@@ -108,11 +111,12 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 ## Phases & task list
 - [ ] **Phase 1: setup, auth, database, deploy**
   - [x] Spec, data model, CLAUDE.md
-  - [ ] Vite + React + TS + Tailwind scaffold, app shell with bottom tabs
-  - [ ] Database migration: full schema + RLS; RLS tests against local Postgres
-  - [ ] Supabase client + email/password sign-in + protected routes
-  - [ ] Cloudflare Pages config (SPA redirects) + deploy guide
+  - [x] Vite + React + TS + Tailwind scaffold, app shell with bottom tabs
+  - [x] Database migration: full schema + RLS; RLS tests against local Postgres (`npm run test:db`)
+  - [x] Supabase client + email/password sign-in + protected routes
+  - [x] Cloudflare Pages config (SPA redirects) + deploy guide (`docs/SETUP.md`)
   - [ ] Owner: create Supabase project, run migration, create user, connect Cloudflare → live URL
+  - [ ] Owner: run the Phase 1 test checklist in `docs/SETUP.md` on the iPhone
 - [ ] **Phase 2: workout logging** (seed exercises, logger screen, swaps, rest timer, local-first save)
 - [ ] **Phase 3: progress views and charts**
 - [ ] **Phase 4: body weight (+ body fat %, muscle mass) and food/macro tracking**
