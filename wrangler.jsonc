@@ -2,7 +2,7 @@
 // "single-page-application" makes every unknown path return index.html, so refreshing /food works.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "fitness-app",
+  "name": "fitnessapp",
   "compatibility_date": "2025-10-01",
   "assets": {
     "directory": "./dist",

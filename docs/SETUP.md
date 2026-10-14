@@ -38,14 +38,14 @@ tells Cloudflare to serve the built `dist/` folder and send unknown paths to the
 
 1. Sign up at <https://dash.cloudflare.com>.
 2. **Workers & Pages → Create → Import a repository**. Connect GitHub (only select `csoethout/FitnessApp`).
-3. Name the project `fitness-app` (must match `"name"` in `wrangler.jsonc`).
+3. Name the project `fitnessapp` (must match `"name"` in `wrangler.jsonc`).
 4. Settings → **Build**:
    - **Production branch:** `claude/fitness-tracking-pwa-xd1s3z`
    - **Build command:** `npm run build`
    - **Deploy command:** `npx wrangler deploy`
    - **Variables and secrets** (build variables, because Vite bakes them in at build time):
      `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-5. Deploy. You get a URL like `https://fitness-app.<your-subdomain>.workers.dev`.
+5. Deploy. You get a URL like `https://fitnessapp.<your-subdomain>.workers.dev`.
 6. Back in Supabase: **Authentication → URL Configuration → Site URL** = that URL.
 
 Every push to the production branch redeploys automatically.
