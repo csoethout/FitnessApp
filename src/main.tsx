@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router'
 import { AuthProvider } from '@/auth/AuthProvider'
 import { RequireAuth } from '@/auth/RequireAuth'
 import { AppLayout } from '@/components/AppLayout'
+import { DataProvider } from '@/data/DataProvider'
 import { FoodScreen } from '@/screens/FoodScreen'
 import { MoreScreen } from '@/screens/MoreScreen'
 import { ProgressScreen } from '@/screens/ProgressScreen'
@@ -18,7 +19,11 @@ const router = createBrowserRouter([
     element: <RequireAuth />,
     children: [
       {
-        element: <AppLayout />,
+        element: (
+          <DataProvider>
+            <AppLayout />
+          </DataProvider>
+        ),
         children: [
           { path: '/', element: <TodayScreen /> },
           { path: '/train', element: <TrainScreen /> },

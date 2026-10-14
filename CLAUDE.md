@@ -104,6 +104,10 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 - Local-first saving pulled forward from Phase 6 into Phase 2 (gym Wi-Fi; retrofitting the logger later is costly).
   Phase 6 still adds offline app shell (service worker), install, CSV export.
 - Phase 2 pre-fills sets from the last session; automatic progression targets arrive with the Phase 5 planner.
+- Sync: one IndexedDB per user (`liftlog-<uid>`), deleted on sign-out (after warning about unsynced changes).
+  Server owns `updated_at`; pull uses keyset (updated_at, id); rows with pending local edits are never overwritten;
+  server-rejected rows are marked failed (shown in More) instead of blocking the queue. Syncs on write (debounced),
+  foreground, reconnect, and every 60 s; no background sync on iOS.
 - Logger UX: only the current set is expanded (big steppers + ✓); done sets collapse to one line; optional
   effort/"couldn't finish" row after ✓; timer bar at bottom. iOS can't alert when the PWA is backgrounded.
 - Allowed values are text + CHECK constraints, not Postgres enums (easier to extend).
@@ -115,10 +119,15 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   (planner/progression/units are pure functions with Vitest tests).
 - Mobile first: design at 390px wide, tap targets ≥48px, primary action at the bottom within thumb reach.
 - Env vars: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` in `.env.local` (git-ignored). See `.env.example`.
-- Commands: `npm run dev`, `npm run build`, `npm test`, `npm run lint`, `npm run test:db` (RLS tests on local Postgres).
+- Commands: `npm run dev`, `npm run build`, `npm test`, `npm run lint`, `npm run test:db` (RLS tests on local Postgres),
+  `POSTGREST_BIN=… npm run test:sync` (sync engine against real PostgREST + RLS).
+- Data access: screens read with `useLiveQuery(() => db.<table>…)` and write ONLY via `useData().store`
+  (`insert` / `update` / `remove`). Never call `supabase.from()` for user data from screens — sync owns that.
+  UI must filter `deleted_at == null`. New synced tables: add to `types.ts` (Tables, SYNC_ORDER, OWNER_COLUMN)
+  and a new Dexie `db.version(n)`.
 
 ## Phases & task list
-- [ ] **Phase 1: setup, auth, database, deploy**
+- [x] **Phase 1: setup, auth, database, deploy** (done 2026-10-14)
   - [x] Spec, data model, CLAUDE.md
   - [x] Vite + React + TS + Tailwind scaffold, app shell with bottom tabs
   - [x] Database migration: full schema + RLS; RLS tests against local Postgres (`npm run test:db`)
@@ -126,12 +135,12 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] Cloudflare config (`wrangler.jsonc`, SPA fallback) + deploy guide (`docs/SETUP.md`)
   - [x] Owner: Supabase project created, migration run, user created
   - [x] Owner: Cloudflare Worker `fitnessapp` connected, build variables set → live at https://fitnessapp.cnsoethout.workers.dev
-  - [ ] Owner: set Supabase Site URL to the live URL
-  - [ ] Owner: run the Phase 1 test checklist in `docs/SETUP.md` on the iPhone
+  - [x] Owner: set Supabase Site URL to the live URL
+  - [x] Owner: run the Phase 1 test checklist in `docs/SETUP.md` on the iPhone
 - [ ] **Phase 2: workout logging**
   - [x] 2.1 Exercise library migration (753 exercises, stretches excluded, stable md5 ids, re-runnable)
-  - [ ] Owner: run `20261015000000_seed_exercises.sql` in Supabase SQL Editor
-  - [ ] 2.2 Local-first data layer (Dexie + sync queue to Supabase)
+  - [x] Owner: run `20261015000000_seed_exercises.sql` in Supabase SQL Editor (753 rows confirmed)
+  - [x] 2.2 Local-first data layer (`src/data`: Dexie per-user DB, outbox, SyncEngine push/pull, SyncManager, sync status card)
   - [ ] 2.3 Day setup (starter days pre-filled as editable data) + "Main gym" equipment profile
   - [ ] 2.4 Logger screen
   - [ ] 2.5 Swap + "Not at this gym"
