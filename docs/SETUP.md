@@ -31,24 +31,28 @@ npm run dev                  # open the printed http://localhost:5173 URL and si
 
 To try it on your phone on the same Wi-Fi: `npm run dev -- --host` and open the "Network" URL.
 
-## 3. Cloudflare Pages (live URL)
+## 3. Cloudflare (live URL)
+
+We use Cloudflare Workers with static assets (free; static requests are unlimited). `wrangler.jsonc` in the repo
+tells Cloudflare to serve the built `dist/` folder and send unknown paths to the app.
 
 1. Sign up at <https://dash.cloudflare.com>.
-2. **Workers & Pages → Create → Pages → Connect to Git**. Authorize GitHub and pick `csoethout/FitnessApp`.
-3. Build settings:
-   - **Production branch:** `claude/fitness-tracking-pwa-xd1s3z` (we can switch to `main` later)
-   - **Framework preset:** Vite (or None)
+2. **Workers & Pages → Create → Import a repository**. Connect GitHub (only select `csoethout/FitnessApp`).
+3. Name the project `fitness-app` (must match `"name"` in `wrangler.jsonc`).
+4. Settings → **Build**:
+   - **Production branch:** `claude/fitness-tracking-pwa-xd1s3z`
    - **Build command:** `npm run build`
-   - **Build output directory:** `dist`
-   - **Environment variables:** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (same values as above)
-4. **Save and Deploy.** After ~1 minute you get a URL like `https://fitness-app-xyz.pages.dev`.
-5. Back in Supabase: **Authentication → URL Configuration → Site URL** = your `pages.dev` URL.
+   - **Deploy command:** `npx wrangler deploy`
+   - **Variables and secrets** (build variables, because Vite bakes them in at build time):
+     `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+5. Deploy. You get a URL like `https://fitness-app.<your-subdomain>.workers.dev`.
+6. Back in Supabase: **Authentication → URL Configuration → Site URL** = that URL.
 
 Every push to the production branch redeploys automatically.
 
 ## 4. Test checklist
 
-- [ ] Open the `pages.dev` URL on your iPhone → sign-in screen (no red "not configured" box).
+- [ ] Open the `workers.dev` URL on your iPhone → sign-in screen (no red "not configured" box).
 - [ ] Wrong password → error message. Right password → **Today** screen.
 - [ ] All five tabs open. Refresh on a tab (e.g. `/food`) → still works (no 404).
 - [ ] **More → Sign out** → back to sign-in.

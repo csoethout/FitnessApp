@@ -1,0 +1,11 @@
+// Cloudflare Workers static-assets config. Serves the Vite build in dist/ (no server code).
+// "single-page-application" makes every unknown path return index.html, so refreshing /food works.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fitness-app",
+  "compatibility_date": "2025-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}

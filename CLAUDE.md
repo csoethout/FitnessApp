@@ -28,7 +28,7 @@ This file is the source of truth between sessions: read it first, update it as y
 | UI | Tailwind CSS v4 (+ shadcn/ui-style components as needed) | Fast, consistent mobile styling |
 | Routing | react-router | Standard |
 | Backend | Supabase free tier (Postgres, Auth, RLS, Edge Functions) | Relational data + native RLS |
-| Hosting | Cloudflare Pages free tier | Free, no commercial-use restriction |
+| Hosting | Cloudflare Workers static assets, free tier (`wrangler.jsonc`) | Free, unlimited static requests; Cloudflare's current Git flow |
 | Offline | Dexie (IndexedDB) + vite-plugin-pwa (Phase 6; data layer designed for it from the start) | iOS-safe offline |
 | Charts | Recharts (Phase 3) | |
 | Exercises | free-exercise-db (Unlicense) seeded into `exercises` | Equipment + muscle tags for swaps |
@@ -91,7 +91,8 @@ displayed in lb. Derived stats (e1RM, PRs, volume, trends, next targets) are com
 Schema lives in `supabase/migrations/`. Never edit an applied migration; add a new one.
 
 ## Decisions log
-- Vite over Next.js; Supabase over Firebase; Cloudflare Pages over Vercel.
+- Vite over Next.js; Supabase over Firebase; Cloudflare over Vercel. Deployed as a Workers static-assets project
+  (SPA fallback via `not_found_handling`), not classic Pages; no `_redirects` file needed.
 - Email + password auth, **invite-only** (sign-ups disabled in Supabase; users added from dashboard).
 - Hard to change later (deliberate): client UUIDs + soft deletes, kg storage, food log macro snapshots,
   template vs weekly instance, `user_id` on every row.
@@ -114,7 +115,8 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] Vite + React + TS + Tailwind scaffold, app shell with bottom tabs
   - [x] Database migration: full schema + RLS; RLS tests against local Postgres (`npm run test:db`)
   - [x] Supabase client + email/password sign-in + protected routes
-  - [x] Cloudflare Pages config (SPA redirects) + deploy guide (`docs/SETUP.md`)
+  - [x] Cloudflare config (`wrangler.jsonc`, SPA fallback) + deploy guide (`docs/SETUP.md`)
+  - [x] Owner: Supabase project created, migration run, user created
   - [ ] Owner: create Supabase project, run migration, create user, connect Cloudflare → live URL
   - [ ] Owner: run the Phase 1 test checklist in `docs/SETUP.md` on the iPhone
 - [ ] **Phase 2: workout logging** (seed exercises, logger screen, swaps, rest timer, local-first save)
