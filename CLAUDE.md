@@ -117,7 +117,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] Supabase client + email/password sign-in + protected routes
   - [x] Cloudflare config (`wrangler.jsonc`, SPA fallback) + deploy guide (`docs/SETUP.md`)
   - [x] Owner: Supabase project created, migration run, user created
-  - [ ] Owner: create Supabase project, run migration, create user, connect Cloudflare → live URL
+  - [ ] Owner: Cloudflare Worker `fitnessapp` connected, build variables set → live workers.dev URL
   - [ ] Owner: run the Phase 1 test checklist in `docs/SETUP.md` on the iPhone
 - [ ] **Phase 2: workout logging** (seed exercises, logger screen, swaps, rest timer, local-first save)
 - [ ] **Phase 3: progress views and charts**
