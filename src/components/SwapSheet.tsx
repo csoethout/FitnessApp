@@ -60,7 +60,7 @@ export function SwapSheet({ target, excludeIds, planOption, planDefault = false,
       {planOption && (
         <label className="mb-2 flex min-h-12 items-center gap-3 rounded-xl bg-surface-2 px-3">
           <input type="checkbox" checked={alsoInPlan} onChange={(e) => setAlsoInPlan(e.target.checked)} className="size-5 accent-accent" />
-          <span className="text-sm">Also use it in my weekly plan from now on</span>
+          <span className="text-sm">Replace it on every day of my weekly plan</span>
         </label>
       )}
       <ul>

@@ -5,7 +5,8 @@ import { ExercisePicker } from '@/components/ExercisePicker'
 import { Stepper } from '@/components/Stepper'
 import { SwapSheet } from '@/components/SwapSheet'
 import { useData } from '@/data/DataProvider'
-import { useTemplateDay, type DayExercise } from '@/data/queries'
+import { useMainGym, useTemplateDay, type DayExercise } from '@/data/queries'
+import { markUnavailable, replaceInPlan } from '@/data/swap'
 import { useStartWorkout } from '@/data/useStartWorkout'
 import type { Exercise } from '@/data/types'
 import { formatRest, WEEKDAYS } from '@/lib/dates'
@@ -19,7 +20,8 @@ export function DayEditorScreen() {
   const [picking, setPicking] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
   const start = useStartWorkout()
-  const [swapping, setSwapping] = useState<DayExercise | null>(null)
+  const [swapping, setSwapping] = useState<{ item: DayExercise; notAtGym: boolean } | null>(null)
+  const gymInfo = useMainGym()
   const usedIds = useMemo(() => new Set(data?.items.map((it) => it.exercise_id)), [data])
 
   if (data === undefined) return null
@@ -92,7 +94,12 @@ export function DayEditorScreen() {
                 onToggle={() => setOpenId(openId === item.id ? null : item.id)}
                 onMoveUp={i > 0 ? () => void move(i, -1) : undefined}
                 onMoveDown={i < items.length - 1 ? () => void move(i, 1) : undefined}
-                onSwap={() => setSwapping(item)}
+                onSwap={() => setSwapping({ item, notAtGym: false })}
+                gymName={gymInfo?.gym?.name ?? 'this gym'}
+                onNotAtGym={async () => {
+                  if (gymInfo?.gym) await markUnavailable(store, gymInfo.gym.id, item.exercise_id)
+                  setSwapping({ item, notAtGym: true })
+                }}
               />
             ))}
           </ul>
@@ -107,14 +114,20 @@ export function DayEditorScreen() {
         </>
       )}
 
-      {swapping?.exercise && (
+      {swapping?.item.exercise && (
         <SwapSheet
-          target={swapping.exercise}
+          target={swapping.item.exercise}
+          title={swapping.notAtGym ? `Replace ${swapping.item.exercise.name}` : undefined}
           excludeIds={usedIds}
+          // "Not at this gym": offer to replace it on every day of the week (on by default).
+          planOption={swapping.notAtGym}
+          planDefault={swapping.notAtGym}
           onClose={() => setSwapping(null)}
-          onPick={(e) => {
-            void store.update('plan_template_exercises', swapping.id, { exercise_id: e.id })
+          onPick={(e, everyDay) => {
+            const { item } = swapping
             setSwapping(null)
+            if (everyDay) void replaceInPlan(store, item.exercise_id, e.id)
+            else void store.update('plan_template_exercises', item.id, { exercise_id: e.id })
           }}
         />
       )}
@@ -137,8 +150,10 @@ function ExerciseRow(props: {
   onMoveUp?: () => void
   onMoveDown?: () => void
   onSwap: () => void
+  onNotAtGym: () => void
+  gymName: string
 }) {
-  const { item, open, onToggle, onMoveUp, onMoveDown, onSwap } = props
+  const { item, open, onToggle, onMoveUp, onMoveDown, onSwap, onNotAtGym, gymName } = props
   const { store } = useData()
   const update = (changes: Partial<DayExercise>) => {
     // Strip the joined exercise before saving.
@@ -202,6 +217,9 @@ function ExerciseRow(props: {
               <Trash2 size={18} /> Remove
             </button>
           </div>
+          <button type="button" onClick={onNotAtGym} className="min-h-12 w-full rounded-xl border border-border text-sm">
+            Not at {gymName}? Hide it and pick a replacement
+          </button>
         </div>
       )}
     </li>

@@ -158,7 +158,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] 2.4 Logger: Start/Resume (Today card, Train, day editor, empty workout), full-screen `/workout/:id`,
         one expanded set, ✓ logs pre-filled values, tap number to type, changes carry to later pending sets,
         optional RIR / couldn't-finish row, warm-up toggle, add set/exercise, finish (drops undone sets), delete
-  - [x] 2.5 Swap (logger + day editor), ⋯ menu: Not at this gym / remove; More → gym page (equipment, restore hidden)
+  - [x] 2.5 Swap (logger + day editor), "Not at this gym" (logger ⋯ menu + day editor button), remove; More → gym page
   - [ ] 2.6 Rest timer, wake lock, warm-ups
   - [ ] 2.7 Finish summary + workout history
 - [ ] **Phase 3: progress views and charts**
