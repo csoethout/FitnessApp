@@ -1,8 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Search, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { ScanBarcode, Search, X } from 'lucide-react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useData } from '@/data/DataProvider'
-import { createCustomFood, logFood, logQuickAdd, MEAL_SLOTS, recentFoods, saveFoundFood, type RecentItem } from '@/data/food'
+import { createCustomFood, logFood, logQuickAdd, lookupBarcode, MEAL_SLOTS, recentFoods, saveFoundFood, type RecentItem } from '@/data/food'
 import { searchUsda, usingDemoKey } from '@/data/foodApi'
 import { matchesQuery, servingLabel, type FoundFood } from '@/lib/foodSearch'
 import type { Food, MealSlot } from '@/data/types'
@@ -14,16 +14,25 @@ import { NumberInput } from './NumberInput'
 import { Stepper } from './Stepper'
 
 type Tab = 'recent' | 'search' | 'label' | 'quick'
+type Scan = { step: 'camera' } | { step: 'looking' | 'notfound' | 'offline'; code: string }
+
+// The scanner and its ~1 MB reader load only when you tap Scan.
+const BarcodeScanner = lazy(() => import('./BarcodeScanner').then((m) => ({ default: m.BarcodeScanner })))
 
 /**
- * Add food to a meal. Opens on Recent (you eat the same things a lot), then Label (type the
- * nutrition panel) and Quick add (just the numbers). Calories and macros must agree (4/4/9 kcal per g). Search, Scan and Saved meals arrive in steps 4.3–4.5.
+ * Add food to a meal. Opens on Recent (you eat the same things a lot), then Search (your foods + USDA), Label (type
+ * the nutrition panel) and Quick add (just the numbers). Scan (header button) looks a barcode up in your foods, USDA,
+ * then Open Food Facts. Calories and macros must agree (4/4/9 kcal per g). Saved meals arrive in step 4.5.
  */
 export function AddFoodSheet(props: { date: string; slot: MealSlot; onClose: () => void }) {
   const { date, onClose } = props
   const [slot, setSlot] = useState<MealSlot>(props.slot)
   const [tab, setTab] = useState<Tab>('recent')
   const [picked, setPicked] = useState<Portion | null>(null)
+  const [scan, setScan] = useState<Scan | null>(null)
+  const [labelBarcode, setLabelBarcode] = useState<string | null>(null)
+  const scanCtrl = useRef<AbortController | null>(null)
+  useEffect(() => () => scanCtrl.current?.abort(), [])
   const { store } = useData()
 
   const tabs: { key: Tab; label: string }[] = [
@@ -50,10 +59,42 @@ export function AddFoodSheet(props: { date: string; slot: MealSlot; onClose: () 
     })
   }
 
+  function pickMine(food: Food) {
+    setPicked({
+      title: food.brand ? `${food.name} (${food.brand})` : food.name, kcal: food.kcal, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g,
+      food, startServings: 1, add: (servings) => logFood(store, date, slot, food, servings),
+    })
+  }
+
+  async function lookup(code: string) {
+    scanCtrl.current?.abort()
+    const c = new AbortController()
+    scanCtrl.current = c
+    setScan({ step: 'looking', code })
+    try {
+      const r = await lookupBarcode(store, code, c.signal)
+      if (c.signal.aborted) return
+      if (r.kind === 'mine') pickMine(r.food)
+      if (r.kind === 'found') pickFound(r.found)
+      setScan(r.kind === 'mine' || r.kind === 'found' ? null : { step: r.kind, code })
+    } catch {
+      // cancelled
+    }
+  }
+
+  function typeFromLabel(code: string) {
+    setLabelBarcode(code)
+    setTab('label')
+    setScan(null)
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-bg pt-[env(safe-area-inset-top)]">
       <div className="flex items-center gap-2 px-4 pt-3">
         <h2 className="flex-1 text-xl font-semibold">Add food</h2>
+        <button type="button" onClick={() => setScan({ step: 'camera' })} className="flex min-h-12 items-center gap-2 rounded-xl border border-border px-3">
+          <ScanBarcode size={20} /> Scan
+        </button>
         <button type="button" onClick={onClose} aria-label="Close" className="grid size-12 place-items-center">
           <X />
         </button>
@@ -87,10 +128,66 @@ export function AddFoodSheet(props: { date: string; slot: MealSlot; onClose: () 
       <div className="flex-1 overflow-y-auto px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {tab === 'recent' && <RecentTab date={date} onPick={pickRecent} onEmpty={() => setTab('search')} />}
         {tab === 'search' && <SearchTab date={date} onPick={pickFound} onPickMine={pickRecent} onLabel={() => setTab('label')} />}
-        {tab === 'label' && <LabelTab date={date} slot={slot} onDone={onClose} />}
+        {tab === 'label' && <LabelTab key={labelBarcode ?? ''} date={date} slot={slot} barcode={labelBarcode} onDone={onClose} />}
         {tab === 'quick' && <QuickTab date={date} slot={slot} onDone={onClose} />}
       </div>
       {picked && <PortionSheet portion={picked} onCancel={() => setPicked(null)} onDone={onClose} />}
+      {scan?.step === 'camera' && (
+        <Suspense fallback={<div className="fixed inset-0 z-[60] bg-black" />}>
+          <BarcodeScanner onCode={(code) => void lookup(code)} onClose={() => setScan(null)} />
+        </Suspense>
+      )}
+      {scan && scan.step !== 'camera' && (
+        <ScanResult
+          scan={scan}
+          onCancel={() => {
+            scanCtrl.current?.abort()
+            setScan(null)
+          }}
+          onRetry={() => void lookup(scan.code)}
+          onRescan={() => setScan({ step: 'camera' })}
+          onLabel={() => typeFromLabel(scan.code)}
+        />
+      )}
+    </div>
+  )
+}
+
+/** While a scanned code is looked up, or when it wasn't found. */
+function ScanResult(props: { scan: Exclude<Scan, { step: 'camera' }>; onCancel: () => void; onRetry: () => void; onRescan: () => void; onLabel: () => void }) {
+  const { scan, onCancel, onRetry, onRescan, onLabel } = props
+  const btn = 'min-h-12 w-full rounded-xl border border-border'
+  return (
+    <div className="fixed inset-0 z-[55] flex items-end bg-black/60" onClick={onCancel}>
+      <div role="dialog" aria-label="Barcode" onClick={(e) => e.stopPropagation()} className="w-full space-y-3 rounded-t-3xl border-t border-border bg-surface px-4 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <p className="text-sm text-muted tabular-nums">Barcode {scan.code}</p>
+        {scan.step === 'looking' && <p className="py-4 text-center">Looking it up…</p>}
+        {scan.step === 'notfound' && (
+          <>
+            <p>Not in USDA or Open Food Facts. Type it from the label once; next time this barcode finds it instantly.</p>
+            <button type="button" onClick={onLabel} className="min-h-14 w-full rounded-xl bg-accent text-lg font-semibold text-accent-ink">
+              Type it from the label
+            </button>
+            <button type="button" onClick={onRescan} className={btn}>
+              Scan again
+            </button>
+          </>
+        )}
+        {scan.step === 'offline' && (
+          <>
+            <p>Couldn’t reach the food databases. Check your connection, or type it from the label.</p>
+            <button type="button" onClick={onRetry} className="min-h-14 w-full rounded-xl bg-accent text-lg font-semibold text-accent-ink">
+              Try again
+            </button>
+            <button type="button" onClick={onLabel} className={btn}>
+              Type it from the label
+            </button>
+          </>
+        )}
+        <button type="button" onClick={onCancel} className="min-h-12 w-full text-sm text-muted">
+          Cancel
+        </button>
+      </div>
     </div>
   )
 }
@@ -313,7 +410,7 @@ function SearchTab(props: { date: string; onPick: (f: FoundFood) => void; onPick
 }
 
 /** Type in a nutrition label. Saves it as your own food (shows in Recent next time), then logs it. */
-function LabelTab({ date, slot, onDone }: { date: string; slot: MealSlot; onDone: () => void }) {
+function LabelTab({ date, slot, barcode, onDone }: { date: string; slot: MealSlot; barcode: string | null; onDone: () => void }) {
   const { store } = useData()
   const [name, setName] = useState('')
   const [brand, setBrand] = useState('')
@@ -330,7 +427,7 @@ function LabelTab({ date, slot, onDone }: { date: string; slot: MealSlot; onDone
     const food: Food = await createCustomFood(store, {
       name: name.trim(), brand: brand.trim() || null, serving_amount: servingAmount ?? 1, serving_unit: servingUnit.trim() || 'serving',
       serving_grams: grams, kcal: effectiveKcal(macros) ?? 0, protein_g: macros.protein ?? 0, carbs_g: macros.carbs ?? 0, fat_g: macros.fat ?? 0,
-      barcode: null, ...extraCols,
+      barcode, ...extraCols,
     })
     await logFood(store, date, slot, food, servings)
     onDone()
@@ -339,6 +436,7 @@ function LabelTab({ date, slot, onDone }: { date: string; slot: MealSlot; onDone
   const text = 'h-12 w-full rounded-xl border border-border bg-surface-2 px-3 text-base outline-none focus:border-accent'
   return (
     <div className="space-y-3">
+      {barcode && <p className="rounded-xl bg-surface p-3 text-sm text-muted">Barcode {barcode} is saved with this food, so scanning it next time finds it.</p>}
       <input className={text} placeholder="Food name *" value={name} onChange={(e) => setName(e.target.value)} aria-label="Food name" />
       <input className={text} placeholder="Brand (optional)" value={brand} onChange={(e) => setBrand(e.target.value)} aria-label="Brand" />
       <p className="pt-2 text-sm font-semibold">Per serving, as on the label</p>

@@ -227,7 +227,12 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         `src/lib/foodSearch.ts` (unit tested), fetches in `src/data/foodApi.ts` (falls back to USDA DEMO_KEY).
         Picking saves your own copy (`saveFoundFood`, re-used next time). Amount in servings or grams
         (`AmountPicker`, also when editing an entry); day list shows "225 g" for gram-measured foods
-  - [ ] 4.4 Barcode scanning (USDA by barcode first, Open Food Facts product lookup as fallback)
+  - [x] 4.4 Barcode scanning: Add food → Scan (header). Camera via getUserMedia + `barcode-detector` ponyfill
+        (zxing-wasm, MIT; iOS Safari has no native BarcodeDetector). The 1.1 MB wasm (464 KB gzip) is self-hosted and
+        lazy-loaded only when the scanner opens. UPC-E expanded to UPC-A; codes compared ignoring leading zeros
+        (`src/lib/barcode.ts`). Lookup (`lookupBarcode`): your foods → USDA branded (exact gtinUpc match) → Open Food
+        Facts product API; quiet retries. Not found → Label tab with the barcode saved on the food, so the next scan
+        finds it locally. Type-the-number fallback with check-digit validation. E2E with a fake camera (.y4m)
   - [ ] 4.5 Saved meals / recipes
 - [ ] **Phase 5: rules-based planner, Plan my week, equipment profiles, cardio logging**
 - [ ] **Phase 6: PWA install, offline sync, CSV export**

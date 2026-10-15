@@ -1,7 +1,9 @@
 import type { LocalDb } from './db'
 import type { LocalStore } from './store'
 import { EXTRA_NUTRIENTS, entryCol, foodCol } from '@/lib/nutrition'
+import { sameBarcode } from '@/lib/barcode'
 import type { FoundFood } from '@/lib/foodSearch'
+import { barcodeOff, barcodeUsda } from './foodApi'
 import type { Food, FoodLogEntry, MealSlot } from './types'
 
 const live = <T extends { deleted_at: string | null }>(rows: T[]) => rows.filter((r) => !r.deleted_at)
@@ -145,4 +147,26 @@ export async function saveFoundFood(store: LocalStore, found: FoundFood): Promis
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { generic, ...row } = found
   return store.insert('foods', row)
+}
+
+export type BarcodeResult = { kind: 'mine'; food: Food } | { kind: 'found'; found: FoundFood } | { kind: 'notfound' } | { kind: 'offline' }
+
+/**
+ * Look up a scanned barcode: your own foods first (instant, offline), then USDA, then Open Food Facts.
+ * "offline" means neither service could be reached (so we can't say it doesn't exist).
+ */
+export async function lookupBarcode(store: LocalStore, code: string, signal: AbortSignal): Promise<BarcodeResult> {
+  const mine = live(await store.db.foods.where('owner_id').equals(store.userId).toArray()).find((f) => sameBarcode(f.barcode, code))
+  if (mine) return { kind: 'mine', food: mine }
+  let reached = false
+  for (const source of [barcodeUsda, barcodeOff]) {
+    try {
+      const found = await source(code, signal)
+      reached = true
+      if (found) return { kind: 'found', found }
+    } catch (err) {
+      if (signal.aborted) throw err
+    }
+  }
+  return reached ? { kind: 'notfound' } : { kind: 'offline' }
 }

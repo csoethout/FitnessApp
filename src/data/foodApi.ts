@@ -1,4 +1,5 @@
-import { fromUsda, type FoundFood, type UsdaFood } from '@/lib/foodSearch'
+import { sameBarcode } from '@/lib/barcode'
+import { fromOff, fromUsda, type FoundFood, type OffProduct, type UsdaFood } from '@/lib/foodSearch'
 
 // Searches go straight from the phone to the free public APIs (see CLAUDE.md → Food search).
 // The USDA key is a free read-only key and ends up in the app bundle (accepted). Without one we use
@@ -41,4 +42,38 @@ export async function searchUsda(query: string, signal: AbortSignal): Promise<Fo
   ])
   if (generic.status === 'rejected' && branded.status === 'rejected') throw generic.reason
   return [...(generic.status === 'fulfilled' ? generic.value : []), ...(branded.status === 'fulfilled' ? branded.value : [])]
+}
+
+/** Try again quietly when a request fails (USDA / OFF are sometimes slow); gives up after `tries`. */
+async function retry<T>(fn: () => Promise<T>, signal: AbortSignal, tries = 3): Promise<T> {
+  for (let i = 0; ; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      if (signal.aborted || i >= tries - 1 || !navigator.onLine) throw err
+      await new Promise((r) => setTimeout(r, i === 0 ? 1000 : 3000))
+    }
+  }
+}
+
+/** USDA branded foods by barcode: searches the number and keeps only exact barcode matches. */
+export async function barcodeUsda(code: string, signal: AbortSignal): Promise<FoundFood | null> {
+  const q = new URLSearchParams({ api_key: USDA_KEY, query: code, dataType: 'Branded', pageSize: '10' })
+  const data = await retry(() => getJson<{ foods?: UsdaFood[] }>(`https://api.nal.usda.gov/fdc/v1/foods/search?${q}`, withTimeout(signal, 20_000)), signal)
+  const match = (data.foods ?? []).find((f) => sameBarcode(f.gtinUpc, code))
+  return match ? fromUsda(match) : null
+}
+
+const OFF_FIELDS = 'code,product_name,product_name_en,brands,serving_size,serving_quantity,nutriments'
+
+/** Open Food Facts product by barcode (one quick lookup, unlike their text search). */
+export async function barcodeOff(code: string, signal: AbortSignal): Promise<FoundFood | null> {
+  const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${OFF_FIELDS}`
+  const data = await retry(async () => {
+    const res = await fetch(url, { signal: withTimeout(signal, 20_000) })
+    if (res.status === 404) return { status: 0 } // not in their database
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return (await res.json()) as { status?: number; product?: OffProduct }
+  }, signal)
+  return data.status === 1 && data.product ? fromOff({ ...data.product, code: data.product.code || code }) : null
 }
