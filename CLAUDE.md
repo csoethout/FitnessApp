@@ -127,6 +127,10 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 - Stats (`src/lib/stats.ts`): e1RM = Epley, 1–10 reps, completed `working` sets only (warm-up and `limited`
   excluded). Volume = weight × reps of completed non-warm-up sets (limited included). PRs (e1RM, heaviest set) only
   vs workouts that started earlier; none the first time an exercise is logged. All computed, never stored.
+- Progress metrics: est. 1-rep max when an exercise has sets ≤10 reps, else heaviest weight (12–15 rep work), else
+  most reps (bodyweight). Sets per muscle count once per PRIMARY muscle group, warm-ups excluded. Weekly target
+  marker = 10 sets. Chart color `--color-chart` #16a34a (validated with the dataviz skill for the dark surface).
+  Recharts is lazy-loaded only on the lift detail page; other charts are plain HTML/SVG.
 - Allowed values are text + CHECK constraints, not Postgres enums (easier to extend).
 - Supabase "publishable"/anon key is safe in the frontend because RLS protects data. The service-role key is
   never in frontend code or the repo.
@@ -157,7 +161,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] Owner: Cloudflare Worker `fitnessapp` connected, build variables set → live at https://fitnessapp.cnsoethout.workers.dev
   - [x] Owner: set Supabase Site URL to the live URL
   - [x] Owner: run the Phase 1 test checklist in `docs/SETUP.md` on the iPhone
-- [ ] **Phase 2: workout logging**
+- [x] **Phase 2: workout logging** (done 2026-10-15)
   - [x] 2.1 Exercise library migration (753 exercises, stretches excluded, stable md5 ids, re-runnable)
   - [x] Owner: run `20261015000000_seed_exercises.sql` in Supabase SQL Editor (753 rows confirmed)
   - [x] 2.2 Local-first data layer (`src/data`: Dexie per-user DB, outbox, SyncEngine push/pull, SyncManager, sync status card)
@@ -172,8 +176,13 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] 2.7 Finish → summary (time, sets, volume, PRs vs earlier sessions, est. 1RM per exercise, edit/delete),
         History list (Train → Recent workouts / See all, `/history`, `/history/:id`)
   - [x] Owner: rest beep confirmed on iPhone
-  - [ ] Owner: test 2.7 on iPhone → Phase 2 done
 - [ ] **Phase 3: progress views and charts**
+  - [x] 3.1 Calculations (`src/lib/progress.ts`): weeks (Sun start), sets per muscle group, weekly volume,
+        per-session points, metric choice, 4-week change, PR events — unit tested
+  - [x] 3.2 Progress tab (Strength | Body placeholder): this week (sets/muscle + volume vs last week), 8-week volume,
+        your lifts (main first, sparkline, 4-wk change), recent PRs (one line per exercise, max 5)
+  - [x] 3.3 Lift detail `/progress/exercise/:id` (lazy-loaded Recharts): trend line, metric chips, best-ever, sessions
+  - [ ] Owner: test Phase 3 on iPhone
 - [ ] **Phase 4: body weight (+ body fat %, muscle mass) and food/macro tracking**
 - [ ] **Phase 5: rules-based planner, Plan my week, equipment profiles, cardio logging**
 - [ ] **Phase 6: PWA install, offline sync, CSV export**

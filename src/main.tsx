@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router'
 import { AuthProvider } from '@/auth/AuthProvider'
@@ -17,6 +17,10 @@ import { SummaryScreen } from '@/screens/SummaryScreen'
 import { TodayScreen } from '@/screens/TodayScreen'
 import { TrainScreen } from '@/screens/TrainScreen'
 import { WorkoutScreen } from '@/screens/WorkoutScreen'
+
+// Charts library only loads when a lift's detail page is opened.
+// eslint-disable-next-line react/only-export-components
+const ExerciseProgressScreen = lazy(() => import('@/screens/ExerciseProgressScreen'))
 import './index.css'
 
 const router = createBrowserRouter([
@@ -43,6 +47,14 @@ const router = createBrowserRouter([
               { path: '/history/:workoutId', element: <SummaryScreen /> },
           { path: '/food', element: <FoodScreen /> },
           { path: '/progress', element: <ProgressScreen /> },
+              {
+                path: '/progress/exercise/:exerciseId',
+                element: (
+                  <Suspense fallback={<p className="text-muted">Loading…</p>}>
+                    <ExerciseProgressScreen />
+                  </Suspense>
+                ),
+              },
           { path: '/more', element: <MoreScreen /> },
               { path: '/more/gym', element: <GymScreen /> },
             ],

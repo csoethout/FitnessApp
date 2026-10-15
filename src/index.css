@@ -11,6 +11,9 @@
   --color-accent: #4ade80;
   --color-accent-ink: #052e14;
   --color-danger: #f87171;
+  /* Chart marks: validated for the dark surface (dataviz lightness band + 3:1 contrast). */
+  --color-chart: #16a34a;
+  --color-grid: #2a3440;
 }
 
 html,
