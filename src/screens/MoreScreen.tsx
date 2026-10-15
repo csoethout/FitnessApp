@@ -6,6 +6,7 @@ import { useConfirm } from '@/components/ConfirmProvider'
 import { Placeholder } from '@/components/Placeholder'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { SyncStatusCard } from '@/components/SyncStatusCard'
+import { TestingTools } from '@/components/TestingTools'
 import { useData } from '@/data/DataProvider'
 import { useMainGym } from '@/data/queries'
 import { supabase } from '@/lib/supabase'
@@ -54,6 +55,7 @@ export function MoreScreen() {
         </Link>
         <Placeholder phase={5}>Profile, timer and effort settings</Placeholder>
         <Placeholder phase={6}>Export all data as CSV</Placeholder>
+        <TestingTools />
         <button
           type="button"
           disabled={signingOut}

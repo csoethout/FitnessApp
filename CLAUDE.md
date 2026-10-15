@@ -53,7 +53,8 @@ This file is the source of truth between sessions: read it first, update it as y
 2. **Workout logger** (most important): exercise cards; set rows prefilled with target; tap ✓ logs as-is;
    big ± steppers (5 lb); set types warm-up / working / limited ("couldn't finish"); optional RIR chips
    (0,1,2,3,4+); optional rest timer bar; Swap + "Not at this gym"; auto-save each tap locally; wake lock where supported.
-   Suggested warm-ups (bar×10, 50%×5, 70%×3, 85%×1) only for the first compound of a session; one tap to add.
+   Suggested warm-ups only for the first compound of a session, kept short (owner: 1–2 sets): 50%×8, plus 75%×3 when
+   working weight ≥135 lb; one tap to add.
 3. **Progress**: e1RM per exercise (Epley, working sets ≤10 reps), PRs, weekly hard sets per muscle + tonnage.
 4. **Food**: day log by meal; add → Recent & Saved first, then Search (USDA/OFF), Scan barcode, Manual label entry.
    Copy yesterday; saved meals/recipes (servings yield). Calories + protein are primary; carbs/fat secondary.
@@ -172,23 +173,25 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         optional RIR / couldn't-finish row, warm-up toggle, add set/exercise, finish (drops undone sets), delete
   - [x] 2.5 Swap (logger + day editor), "Not at this gym" (logger ⋯ menu + day editor button), remove; More → gym page
   - [x] 2.6 Rest timer bar (auto-start, ±15, 1/2/3 min, skip, beep + mute, survives reload), wake lock,
-        warm-up offer on first compound (bar×10, 50%×5, 70%×3, 85%×1; ≥10 lb jumps)
+        warm-up offer on first compound (1–2 sets: 50%×8, +75%×3 from 135 lb)
   - [x] 2.7 Finish → summary (time, sets, volume, PRs vs earlier sessions, est. 1RM per exercise, edit/delete),
         History list (Train → Recent workouts / See all, `/history`, `/history/:id`)
   - [x] Owner: rest beep confirmed on iPhone
-- [ ] **Phase 3: progress views and charts**
+- [x] **Phase 3: progress views and charts** (done 2026-10-15)
   - [x] 3.1 Calculations (`src/lib/progress.ts`): weeks (Sun start), sets per muscle group, weekly volume,
         per-session points, metric choice, 4-week change, PR events — unit tested
   - [x] 3.2 Progress tab (Strength | Body placeholder): this week (sets/muscle + volume vs last week), 8-week volume,
         your lifts (main first, sparkline, 4-wk change), recent PRs (one line per exercise, max 5)
   - [x] 3.3 Lift detail `/progress/exercise/:id` (lazy-loaded Recharts): trend line, metric chips, best-ever, sessions
-  - [ ] Owner: test Phase 3 on iPhone
+  - [x] Owner: test Phase 3 on iPhone
+  - [x] Warm-ups reduced to 1–2 sets (owner request); More → Testing tools (sample workouts / delete all workouts)
 - [ ] **Phase 4: body weight (+ body fat %, muscle mass) and food/macro tracking**
 - [ ] **Phase 5: rules-based planner, Plan my week, equipment profiles, cardio logging**
 - [ ] **Phase 6: PWA install, offline sync, CSV export**
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**
 
 ## Backlog (not in MVP)
+- **Before sharing with anyone: remove Testing tools** (`src/components/TestingTools.tsx`, `src/data/sample.ts`)
 - Suggested workout times from availability blocks (e.g. busy 8am–6pm) + one-off commitments
 - Google Calendar sync (adds OAuth + privacy surface)
 - AI: free-text week check-in ("out of town Fri–Sun, hotel gym")

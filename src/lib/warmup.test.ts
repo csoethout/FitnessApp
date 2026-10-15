@@ -1,32 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import { kgToLb } from './units'
+import { kgToLb, toStoredKg } from './units'
 import { warmupPlan } from './warmup'
-import { toStoredKg } from './units'
 
 const lbs = (sets: { weight_kg: number; reps: number }[]) => sets.map((s) => [Math.round(kgToLb(s.weight_kg)), s.reps])
 
-describe('warmupPlan', () => {
-  it('ramps a 225 lb barbell squat: bar, 50%, 70%, 85%', () => {
+describe('warmupPlan (1–2 sets)', () => {
+  it('gives two sets for a heavy lift: 50% × 8, 75% × 3', () => {
     expect(lbs(warmupPlan(toStoredKg(225, 'lb'), 'barbell'))).toEqual([
-      [45, 10],
-      [115, 5],
-      [160, 3],
-      [190, 1],
+      [115, 8],
+      [170, 3],
     ])
   })
-  it('skips steps too close to the previous one (95 lb: 50 lb is barely above the bar)', () => {
-    expect(lbs(warmupPlan(toStoredKg(95, 'lb'), 'barbell'))).toEqual([
-      [45, 10],
-      [65, 3],
-      [80, 1],
-    ])
+  it('gives one set under 135 lb', () => {
+    expect(lbs(warmupPlan(toStoredKg(95, 'lb'), 'barbell'))).toEqual([[50, 8]])
+    expect(lbs(warmupPlan(toStoredKg(70, 'lb'), 'dumbbell'))).toEqual([[35, 8]])
   })
-  it('uses 40% instead of a bar for dumbbells and machines', () => {
-    expect(lbs(warmupPlan(toStoredKg(70, 'lb'), 'dumbbell'))).toEqual([
-      [30, 10],
-      [50, 3],
-      [60, 1],
-    ])
+  it('never goes below the empty bar on barbell lifts', () => {
+    expect(lbs(warmupPlan(toStoredKg(65, 'lb'), 'barbell'))).toEqual([[45, 8]])
+  })
+  it('skips a warm-up that would be the working weight', () => {
+    expect(warmupPlan(toStoredKg(45, 'lb'), 'barbell')).toEqual([])
   })
   it('returns nothing without a working weight', () => {
     expect(warmupPlan(0, 'barbell')).toEqual([])
