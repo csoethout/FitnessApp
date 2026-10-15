@@ -128,6 +128,16 @@ export async function deleteAllWeighIns(store: LocalStore): Promise<number> {
   })
 }
 
+/** Deletes every food log entry (your saved foods and targets are kept). */
+export async function deleteAllFoodLog(store: LocalStore): Promise<number> {
+  const { db } = store
+  return db.transaction('rw', [db.food_log_entries, db.outbox], async () => {
+    const rows = live(await db.food_log_entries.toArray())
+    for (const r of rows) await store.remove('food_log_entries', r.id)
+    return rows.length
+  })
+}
+
 /** Deletes every workout (including one in progress) with its exercises and sets. Plan and gym are kept. */
 export async function deleteAllWorkouts(store: LocalStore): Promise<number> {
   const { db } = store

@@ -43,5 +43,13 @@ export function openLocalDb(userId: string): LocalDb {
   db.version(2).stores({
     body_measurements: 'id, measured_on',
   })
+  // v3 (Phase 4): food logging and targets.
+  db.version(3).stores({
+    foods: 'id, barcode, owner_id',
+    saved_meals: 'id',
+    saved_meal_items: 'id, saved_meal_id',
+    food_log_entries: 'id, logged_on, food_id',
+    nutrition_targets: 'id, effective_from',
+  })
   return db
 }

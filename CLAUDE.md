@@ -138,6 +138,9 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 - Food search: the app calls USDA FoodData Central and Open Food Facts directly. The USDA key is a free,
   read-only public-data key and is visible in the frontend bundle (accepted risk: only rate-limit abuse; rotate if
   needed). Logged foods are saved as the user's own `foods` rows (no shared server cache).
+- Targets (Phase 4, manual until the Phase 5 planner): user sets kcal, protein, fat; carbs = remainder.
+  Guardrails: ≥1500 kcal (owner is male; sex-specific floor with the Phase 5 profile), fat ≥40 g, protein+fat
+  calories ≤ total. `nutrition_targets` keeps history (one row per effective_from); a day uses the latest ≤ it.
 - Allowed values are text + CHECK constraints, not Postgres enums (easier to extend).
 - Supabase "publishable"/anon key is safe in the frontend because RLS protects data. The service-role key is
   never in frontend code or the repo.
@@ -197,7 +200,9 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         value), Progress → Body (dots + 7-day avg on a real time axis, weekly rate, 30/90/all, edit list, other day);
         `body_measurements` synced (Dexie v2); testing tools add/delete sample weigh-ins
   - [ ] Owner: get USDA key → Cloudflare build var `VITE_USDA_API_KEY`
-  - [ ] 4.2 Food log basics (day view, targets, meals, label entry, quick add, recent, copy yesterday)
+  - [x] 4.2 Food log: Food tab day view (‹ › days, ?d=), calorie/protein meters + carbs/fat, 4 meals, add sheet
+        (Recent default · Nutrition label → own food · Quick add), edit/move/delete entry, copy yesterday (day or
+        meal), targets sheet (kcal/protein/fat, carbs = rest, guardrails), Today food card; Dexie v3 food tables
   - [ ] 4.3 Food search (USDA + Open Food Facts)
   - [ ] 4.4 Barcode scanning
   - [ ] 4.5 Saved meals / recipes

@@ -107,6 +107,53 @@ export type BodyMeasurement = Owned & {
   note: string | null
 }
 
+export type Food = Timestamps & {
+  id: string
+  owner_id: string | null // null = shared cache (server-written); otherwise the user's own food
+  source: 'usda' | 'off' | 'custom'
+  source_id: string | null
+  barcode: string | null
+  name: string
+  brand: string | null
+  serving_amount: number
+  serving_unit: string
+  serving_grams: number | null
+  kcal: number // per serving
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  fiber_g: number | null
+}
+
+export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack'
+
+export type FoodLogEntry = Owned & {
+  logged_on: string // local date YYYY-MM-DD
+  meal_slot: MealSlot
+  food_id: string | null // null = quick add
+  saved_meal_id: string | null
+  servings: number
+  name: string
+  // Snapshot per serving at the time of logging, so later edits to a food don't rewrite history.
+  kcal_per_serving: number
+  protein_g_per_serving: number
+  carbs_g_per_serving: number
+  fat_g_per_serving: number
+}
+
+export type SavedMeal = Owned & { name: string; servings_yield: number; notes: string | null }
+export type SavedMealItem = Owned & { saved_meal_id: string; food_id: string; servings: number; position: number }
+
+export type NutritionTarget = Owned & {
+  goal_id: string | null
+  effective_from: string // local date
+  kcal: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  reason: 'initial' | 'biweekly_adjust' | 'manual'
+}
+
 /** Tables the app reads and writes locally, mapped to their row types. */
 export type Tables = {
   exercises: Exercise
@@ -120,6 +167,11 @@ export type Tables = {
   workout_exercises: WorkoutExercise
   sets: WorkoutSet
   body_measurements: BodyMeasurement
+  foods: Food
+  saved_meals: SavedMeal
+  saved_meal_items: SavedMealItem
+  food_log_entries: FoodLogEntry
+  nutrition_targets: NutritionTarget
 }
 
 export type TableName = keyof Tables
@@ -137,6 +189,11 @@ export const SYNC_ORDER: TableName[] = [
   'workout_exercises',
   'sets',
   'body_measurements',
+  'foods',
+  'saved_meals',
+  'saved_meal_items',
+  'food_log_entries',
+  'nutrition_targets',
 ]
 
 /** Column that identifies the owner. The exercises table uses owner_id (null for the shared catalog). */
@@ -152,4 +209,9 @@ export const OWNER_COLUMN: Record<TableName, 'user_id' | 'owner_id'> = {
   workout_exercises: 'user_id',
   sets: 'user_id',
   body_measurements: 'user_id',
+  foods: 'owner_id',
+  saved_meals: 'user_id',
+  saved_meal_items: 'user_id',
+  food_log_entries: 'user_id',
+  nutrition_targets: 'user_id',
 }

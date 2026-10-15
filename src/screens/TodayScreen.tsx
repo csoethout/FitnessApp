@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Placeholder } from '@/components/Placeholder'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { TodayWorkoutCard } from '@/components/TodayWorkoutCard'
+import { TodayFoodCard } from '@/components/TodayFoodCard'
 import { WeighInCard } from '@/components/WeighInCard'
 
 export function TodayScreen() {
@@ -14,7 +14,7 @@ export function TodayScreen() {
       <div className="space-y-3">
         <TodayWorkoutCard />
         <WeighInCard />
-        <Placeholder phase={4}>Calories and protein left today</Placeholder>
+        <TodayFoodCard />
       </div>
     </>
   )

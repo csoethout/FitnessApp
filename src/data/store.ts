@@ -1,7 +1,7 @@
 import type { LocalDb } from './db'
 import { OWNER_COLUMN, type TableName, type Tables } from './types'
 
-type NewRow<T extends TableName> = Omit<Tables[T], 'id' | 'user_id' | 'created_at' | 'updated_at' | 'deleted_at'> & {
+type NewRow<T extends TableName> = Omit<Tables[T], 'id' | 'user_id' | 'owner_id' | 'created_at' | 'updated_at' | 'deleted_at'> & {
   id?: string
 }
 
