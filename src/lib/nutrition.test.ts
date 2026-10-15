@@ -36,3 +36,18 @@ describe('nutrition', () => {
     expect(addDaysKey('2026-03-01', -1)).toBe('2026-02-28')
   })
 })
+
+describe('macros vs calories', () => {
+  it('computes calories from macros', async () => {
+    const { macroKcal } = await import('./nutrition')
+    expect(macroKcal(23, 7.5, 0)).toBe(122)
+    expect(macroKcal(31, 0, 3.6)).toBeCloseTo(156.4)
+  })
+  it('blocks impossible labels, allows label rounding, hints when far under', async () => {
+    const { checkMacros } = await import('./nutrition')
+    expect(checkMacros(100, 100, 0, 0).status).toBe('over') // 400 kcal of protein in a 100 kcal meal
+    expect(checkMacros(130, 23, 7.5, 0).status).toBe('ok') // Greek yogurt label
+    expect(checkMacros(110, 25, 2, 1.5).status).toBe('ok') // 121.5 implied: within label rounding
+    expect(checkMacros(250, 2, 5, 0).status).toBe('under') // e.g. a beer
+  })
+})

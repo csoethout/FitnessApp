@@ -213,6 +213,10 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         `/food/plan`: details form pre-filled from owner profile, targets from Mifflin-St Jeor × activity × goal,
         "How we got here", small −/+ nudges stored as offsets in profile.settings; TargetKeeper writes today's
         `nutrition_targets` row whenever the plan changes; profiles + goals sync (Dexie v4)
+  - [x] 4.2c Macro check + optional nutrients (owner request): calories auto-fill from P/C/F (4/4/9) until typed;
+        save blocked when macros need >115% of the calories (+10); amber hint when far under (fiber/alcohol);
+        optional fiber, sugar, sat fat, trans fat, cholesterol, sodium on label entry; day totals under the meters
+  - [ ] Owner: run `20261016000000_extra_nutrients.sql` in Supabase SQL Editor
   - [ ] 4.3 Food search (USDA + Open Food Facts)
   - [ ] 4.4 Barcode scanning
   - [ ] 4.5 Saved meals / recipes

@@ -154,7 +154,13 @@ export type Food = Timestamps & {
   protein_g: number
   carbs_g: number
   fat_g: number
+  // Optional label lines (per serving)
   fiber_g: number | null
+  sugar_g: number | null
+  sat_fat_g: number | null
+  trans_fat_g: number | null
+  cholesterol_mg: number | null
+  sodium_mg: number | null
 }
 
 export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack'
@@ -171,6 +177,13 @@ export type FoodLogEntry = Owned & {
   protein_g_per_serving: number
   carbs_g_per_serving: number
   fat_g_per_serving: number
+  // Optional label lines (per serving snapshot); null when unknown
+  fiber_g_per_serving: number | null
+  sugar_g_per_serving: number | null
+  sat_fat_g_per_serving: number | null
+  trans_fat_g_per_serving: number | null
+  cholesterol_mg_per_serving: number | null
+  sodium_mg_per_serving: number | null
 }
 
 export type SavedMeal = Owned & { name: string; servings_yield: number; notes: string | null }

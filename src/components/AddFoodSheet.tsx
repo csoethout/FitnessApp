@@ -4,6 +4,9 @@ import { useState } from 'react'
 import { useData } from '@/data/DataProvider'
 import { createCustomFood, logFood, logQuickAdd, MEAL_SLOTS, recentFoods, type RecentItem } from '@/data/food'
 import type { Food, MealSlot } from '@/data/types'
+import { effectiveKcal, EMPTY_MACROS, macrosValid, type MacroValues } from '@/lib/macroForm'
+import { EXTRA_NUTRIENTS, foodCol, type Extras } from '@/lib/nutrition'
+import { ExtraFields, MacroFields } from './MacroFields'
 import { NumberInput } from './NumberInput'
 import { Stepper } from './Stepper'
 
@@ -11,7 +14,7 @@ type Tab = 'recent' | 'label' | 'quick'
 
 /**
  * Add food to a meal. Opens on Recent (you eat the same things a lot), then Label (type the
- * nutrition panel) and Quick add (just calories). Search, Scan and Saved meals arrive in steps 4.3–4.5.
+ * nutrition panel) and Quick add (just the numbers). Calories and macros must agree (4/4/9 kcal per g). Search, Scan and Saved meals arrive in steps 4.3–4.5.
  */
 export function AddFoodSheet(props: { date: string; slot: MealSlot; onClose: () => void }) {
   const { date, onClose } = props
@@ -146,17 +149,17 @@ function LabelTab({ date, slot, onDone }: { date: string; slot: MealSlot; onDone
   const [servingAmount, setServingAmount] = useState<number | null>(1)
   const [servingUnit, setServingUnit] = useState('serving')
   const [grams, setGrams] = useState<number | null>(null)
-  const [kcal, setKcal] = useState<number | null>(null)
-  const [protein, setProtein] = useState<number | null>(null)
-  const [carbs, setCarbs] = useState<number | null>(null)
-  const [fat, setFat] = useState<number | null>(null)
+  const [macros, setMacros] = useState<MacroValues>(EMPTY_MACROS)
+  const [extras, setExtras] = useState<Extras>({})
   const [servings, setServings] = useState(1)
-  const ok = name.trim() !== '' && kcal !== null && (servingAmount ?? 0) > 0
+  const ok = name.trim() !== '' && macrosValid(macros) && (servingAmount ?? 0) > 0
 
   async function save() {
+    const extraCols = Object.fromEntries(EXTRA_NUTRIENTS.map((n) => [foodCol(n.key), extras[n.key] ?? null]))
     const food: Food = await createCustomFood(store, {
       name: name.trim(), brand: brand.trim() || null, serving_amount: servingAmount ?? 1, serving_unit: servingUnit.trim() || 'serving',
-      serving_grams: grams, kcal: kcal ?? 0, protein_g: protein ?? 0, carbs_g: carbs ?? 0, fat_g: fat ?? 0, fiber_g: null, barcode: null,
+      serving_grams: grams, kcal: effectiveKcal(macros) ?? 0, protein_g: macros.protein ?? 0, carbs_g: macros.carbs ?? 0, fat_g: macros.fat ?? 0,
+      barcode: null, ...extraCols,
     })
     await logFood(store, date, slot, food, servings)
     onDone()
@@ -181,10 +184,8 @@ function LabelTab({ date, slot, onDone }: { date: string; slot: MealSlot; onDone
         <input aria-label="Serving unit" value={servingUnit} onChange={(e) => setServingUnit(e.target.value)} className="h-12 w-28 rounded-xl border border-border bg-surface-2 px-3 text-base outline-none focus:border-accent" />
       </div>
       <NumberInput label="Grams per serving" value={grams} onChange={setGrams} suffix="g" placeholder="optional" />
-      <NumberInput label="Calories" value={kcal} onChange={setKcal} suffix="kcal" required />
-      <NumberInput label="Protein" value={protein} onChange={setProtein} suffix="g" />
-      <NumberInput label="Carbs" value={carbs} onChange={setCarbs} suffix="g" />
-      <NumberInput label="Fat" value={fat} onChange={setFat} suffix="g" />
+      <MacroFields values={macros} onChange={setMacros} />
+      <ExtraFields values={extras} onChange={setExtras} />
       <div className="flex items-center justify-between pt-2">
         <span>Servings eaten</span>
         <Stepper label="servings" value={servings} step={0.25} min={0.25} max={20} format={(v) => String(v)} onChange={setServings} onTypeValue={(v) => setServings(Math.max(0.25, v))} />
@@ -201,13 +202,11 @@ function LabelTab({ date, slot, onDone }: { date: string; slot: MealSlot; onDone
 function QuickTab({ date, slot, onDone }: { date: string; slot: MealSlot; onDone: () => void }) {
   const { store } = useData()
   const [name, setName] = useState('')
-  const [kcal, setKcal] = useState<number | null>(null)
-  const [protein, setProtein] = useState<number | null>(null)
-  const [carbs, setCarbs] = useState<number | null>(null)
-  const [fat, setFat] = useState<number | null>(null)
+  const [macros, setMacros] = useState<MacroValues>(EMPTY_MACROS)
 
   async function save() {
-    await logQuickAdd(store, date, slot, { name: name.trim() || 'Quick add', kcal: kcal ?? 0, protein_g: protein ?? 0, carbs_g: carbs ?? 0, fat_g: fat ?? 0 })
+    const { protein, carbs, fat } = macros
+    await logQuickAdd(store, date, slot, { name: name.trim() || 'Quick add', kcal: effectiveKcal(macros) ?? 0, protein_g: protein ?? 0, carbs_g: carbs ?? 0, fat_g: fat ?? 0 })
     onDone()
   }
   return (
@@ -219,11 +218,8 @@ function QuickTab({ date, slot, onDone }: { date: string; slot: MealSlot; onDone
         onChange={(e) => setName(e.target.value)}
         aria-label="Name"
       />
-      <NumberInput label="Calories" value={kcal} onChange={setKcal} suffix="kcal" required />
-      <NumberInput label="Protein" value={protein} onChange={setProtein} suffix="g" placeholder="optional" />
-      <NumberInput label="Carbs" value={carbs} onChange={setCarbs} suffix="g" placeholder="optional" />
-      <NumberInput label="Fat" value={fat} onChange={setFat} suffix="g" placeholder="optional" />
-      <button type="button" disabled={kcal === null} onClick={() => void save()} className="min-h-14 w-full rounded-xl bg-accent text-lg font-semibold text-accent-ink disabled:opacity-40">
+      <MacroFields values={macros} onChange={setMacros} optionalMacros />
+      <button type="button" disabled={!macrosValid(macros)} onClick={() => void save()} className="min-h-14 w-full rounded-xl bg-accent text-lg font-semibold text-accent-ink disabled:opacity-40">
         Add
       </button>
     </div>

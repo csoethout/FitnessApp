@@ -11,6 +11,32 @@ export type EntryLike = {
 
 export const ZERO: Macros = { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
 
+/** Optional label lines, in display order. Units: g except cholesterol and sodium (mg). */
+export const EXTRA_NUTRIENTS = [
+  { key: 'fiber', label: 'Fiber', unit: 'g' },
+  { key: 'sugar', label: 'Sugar', unit: 'g' },
+  { key: 'sat_fat', label: 'Sat. fat', unit: 'g' },
+  { key: 'trans_fat', label: 'Trans fat', unit: 'g' },
+  { key: 'cholesterol', label: 'Cholesterol', unit: 'mg' },
+  { key: 'sodium', label: 'Sodium', unit: 'mg' },
+] as const
+export type ExtraKey = (typeof EXTRA_NUTRIENTS)[number]['key']
+export type Extras = Partial<Record<ExtraKey, number | null>>
+
+/** Column name for an extra nutrient on foods ("fiber_g") and on log entries ("fiber_g_per_serving"). */
+export const foodCol = (k: ExtraKey) => (k === 'cholesterol' || k === 'sodium' ? `${k}_mg` : `${k}_g`) as `${ExtraKey}_${'g' | 'mg'}`
+export const entryCol = (k: ExtraKey) => `${foodCol(k)}_per_serving`
+
+/** Day totals of the optional nutrients; only those that appear in at least one entry. */
+export function sumExtras(entries: (Record<string, unknown> & { servings: number })[]): { key: ExtraKey; label: string; unit: string; total: number }[] {
+  return EXTRA_NUTRIENTS.flatMap((n) => {
+    const vals = entries.map((e) => e[entryCol(n.key)] as number | null | undefined).filter((v): v is number => typeof v === 'number')
+    if (!vals.length) return []
+    const total = entries.reduce((s, e) => s + (((e[entryCol(n.key)] as number | null | undefined) ?? 0) * e.servings), 0)
+    return [{ key: n.key, label: n.label, unit: n.unit, total }]
+  })
+}
+
 export function entryMacros(e: EntryLike): Macros {
   return {
     kcal: e.kcal_per_serving * e.servings,
@@ -71,3 +97,30 @@ export function addDaysKey(date: string, days: number): string {
 }
 
 export const round0 = (n: number) => Math.round(n)
+
+/** Calories implied by macros: 4 kcal/g protein and carbs, 9 kcal/g fat. */
+export function macroKcal(protein_g: number, carbs_g: number, fat_g: number): number {
+  return protein_g * 4 + carbs_g * 4 + fat_g * 9
+}
+
+export type MacroCheck = { implied: number; status: 'ok' | 'over' | 'under'; message: string | null }
+
+/**
+ * Do the macros fit the calories? Labels round, and fiber counts as carbs but has fewer calories,
+ * so allow ~15% (+10 kcal) over. More than that can't be right → 'over' (blocks saving).
+ * Much less than the calories (e.g. alcohol, a missing number) → 'under' (a hint only).
+ */
+export function checkMacros(kcal: number, protein_g: number, carbs_g: number, fat_g: number): MacroCheck {
+  const implied = macroKcal(protein_g, carbs_g, fat_g)
+  if (implied > kcal * 1.15 + 10) {
+    return {
+      implied,
+      status: 'over',
+      message: `Protein, carbs and fat add up to ${Math.round(implied)} kcal, more than the ${Math.round(kcal)} kcal entered. Check the label.`,
+    }
+  }
+  if (implied > 0 && implied < kcal * 0.6 - 10) {
+    return { implied, status: 'under', message: `Protein, carbs and fat only account for ${Math.round(implied)} of ${Math.round(kcal)} kcal. Missing a number?` }
+  }
+  return { implied, status: 'ok', message: null }
+}

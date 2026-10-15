@@ -10,7 +10,7 @@ import { useDayLog, useTargetOn } from '@/data/foodHooks'
 import type { FoodLogEntry, MealSlot } from '@/data/types'
 import { localDateKey } from '@/lib/body'
 import { formatDay } from '@/lib/dates'
-import { addDaysKey, entryMacros, sumMacros } from '@/lib/nutrition'
+import { addDaysKey, entryMacros, sumExtras, sumMacros } from '@/lib/nutrition'
 
 /** One day of eating: calories/protein vs target, meals, add food, copy yesterday. Date lives in ?d= so Back works. */
 export function FoodScreen() {
@@ -28,6 +28,7 @@ export function FoodScreen() {
   const [editing, setEditing] = useState<FoodLogEntry | null>(null)
 
   const totals = useMemo(() => sumMacros((entries ?? []).map(entryMacros)), [entries])
+  const extras = useMemo(() => sumExtras(entries ?? []), [entries])
   if (entries === undefined || target === undefined) return null
 
   const label = date === today ? 'Today' : date === addDaysKey(today, -1) ? 'Yesterday' : formatDay(date + 'T12:00:00')
@@ -61,6 +62,11 @@ export function FoodScreen() {
         </Link>
       ) : null}
       <MacroBars eaten={totals} target={target} />
+      {extras.length > 0 && (
+        <p className="mt-2 text-center text-xs text-muted">
+          {extras.map((x) => `${x.label} ${x.unit === 'g' && x.total < 10 ? Math.round(x.total * 10) / 10 : Math.round(x.total).toLocaleString()} ${x.unit}`).join(' · ')}
+        </p>
+      )}
 
       {entries.length === 0 && (prevEntries?.length ?? 0) > 0 && (
         <button

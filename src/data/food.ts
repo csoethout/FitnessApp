@@ -1,5 +1,6 @@
 import type { LocalDb } from './db'
 import type { LocalStore } from './store'
+import { EXTRA_NUTRIENTS, entryCol, foodCol } from '@/lib/nutrition'
 import type { Food, FoodLogEntry, MealSlot } from './types'
 
 const live = <T extends { deleted_at: string | null }>(rows: T[]) => rows.filter((r) => !r.deleted_at)
@@ -13,12 +14,31 @@ export const MEAL_SLOTS: { slot: MealSlot; label: string }[] = [
 
 type PerServing = { name: string; kcal: number; protein_g: number; carbs_g: number; fat_g: number }
 
-/** Log a food. The entry keeps its own copy of the food's macros (per serving). */
+/** Copy a food's optional label lines onto a log entry (per serving). */
+function extrasFromFood(food: Food) {
+  return Object.fromEntries(
+    EXTRA_NUTRIENTS.map((n) => [entryCol(n.key), (food as unknown as Record<string, number | null>)[foodCol(n.key)] ?? null]),
+  ) as ExtraEntryCols
+}
+
+type ExtraEntryCols = Pick<
+  FoodLogEntry,
+  'fiber_g_per_serving' | 'sugar_g_per_serving' | 'sat_fat_g_per_serving' | 'trans_fat_g_per_serving' | 'cholesterol_mg_per_serving' | 'sodium_mg_per_serving'
+>
+
+const NO_EXTRAS: ExtraEntryCols = {
+  fiber_g_per_serving: null, sugar_g_per_serving: null, sat_fat_g_per_serving: null, trans_fat_g_per_serving: null,
+  cholesterol_mg_per_serving: null, sodium_mg_per_serving: null,
+}
+
+/** Log a food. The entry keeps its own copy of the food's macros and label lines (per serving). */
 export function logFood(store: LocalStore, date: string, slot: MealSlot, food: Food, servings: number) {
   return store.insert('food_log_entries', {
     logged_on: date, meal_slot: slot, food_id: food.id, saved_meal_id: null, servings,
     name: food.brand ? `${food.name} (${food.brand})` : food.name,
     kcal_per_serving: food.kcal, protein_g_per_serving: food.protein_g, carbs_g_per_serving: food.carbs_g, fat_g_per_serving: food.fat_g,
+    ...NO_EXTRAS,
+    ...extrasFromFood(food),
   })
 }
 
@@ -27,15 +47,20 @@ export function logQuickAdd(store: LocalStore, date: string, slot: MealSlot, m: 
   return store.insert('food_log_entries', {
     logged_on: date, meal_slot: slot, food_id: null, saved_meal_id: null, servings: 1, name: m.name || 'Quick add',
     kcal_per_serving: m.kcal, protein_g_per_serving: m.protein_g, carbs_g_per_serving: m.carbs_g, fat_g_per_serving: m.fat_g,
+    ...NO_EXTRAS,
   })
 }
 
 /** A food typed in from a nutrition label. Saved as the user's own food so it shows up in Recent. */
 export function createCustomFood(
   store: LocalStore,
-  f: Pick<Food, 'name' | 'brand' | 'serving_amount' | 'serving_unit' | 'serving_grams' | 'kcal' | 'protein_g' | 'carbs_g' | 'fat_g' | 'fiber_g' | 'barcode'>,
+  f: Pick<Food, 'name' | 'brand' | 'serving_amount' | 'serving_unit' | 'serving_grams' | 'kcal' | 'protein_g' | 'carbs_g' | 'fat_g' | 'barcode'> &
+    Partial<Pick<Food, 'fiber_g' | 'sugar_g' | 'sat_fat_g' | 'trans_fat_g' | 'cholesterol_mg' | 'sodium_mg'>>,
 ) {
-  return store.insert('foods', { ...f, source: 'custom', source_id: null })
+  return store.insert('foods', {
+    fiber_g: null, sugar_g: null, sat_fat_g: null, trans_fat_g: null, cholesterol_mg: null, sodium_mg: null,
+    ...f, source: 'custom', source_id: null,
+  })
 }
 
 /** Copy one day's entries (or one meal's) to another day. Returns how many were copied. */
