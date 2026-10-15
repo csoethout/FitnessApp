@@ -135,6 +135,12 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   (default 20 min / 1 mi), "Other" sheet (activity, minutes, miles optional). Distance stored in km, shown in miles.
 - Settings (step 5.4): profile.settings.restTimer / askEffort (default on). "Couldn't finish" is always offered.
   kg units deliberately NOT built (owner uses lb; ~15 files show lb): see Backlog.
+- PWA (step 6.1): vite-plugin-pwa 2 (generateSW). Precaches the built app (~2.3 MB incl. the barcode wasm) and
+  falls back to index.html for any route, so the app opens offline; API calls are never cached by the SW (data
+  lives in IndexedDB). `registerType: 'prompt'`: a new version waits for "Reload" in `UpdatePrompt` (top of the
+  tab screens; checks hourly) so an update never reloads mid-workout. Placeholder icon `public/icon.svg` rendered
+  to PNGs (180 apple-touch, 192, 512, maskable 512) with Playwright; real branding in the UX pass. iOS takes the
+  home-screen icon/name when you "Add to Home Screen": re-add to pick up a new icon.
 - Sync: one IndexedDB per user (`liftlog-<uid>`), deleted on sign-out (after warning about unsynced changes).
   Server owns `updated_at`; pull uses keyset (updated_at, id); rows with pending local edits are never overwritten;
   server-rejected rows are marked failed (shown in More) instead of blocking the queue. Syncs on write (debounced),
@@ -287,7 +293,15 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] 5.4 Gyms (equipment profiles for Away days), cardio logging (Today card), settings (rest timer / effort toggles)
   - [ ] Owner: test Phase 5 on iPhone
 - [ ] **Phase 6: PWA install, offline sync, CSV export**
+  - [x] 6.1 Installable app + offline app shell (manifest, icons, service worker, update banner); E2E: opens
+        offline incl. deep links, offline writes upload after reconnect, update banner → Reload
+  - [ ] 6.2 CSV export of all data
+- [ ] **UX pass** (after Phase 6, owner agreed): navigation/layout, look (colors, type, spacing), name + icon,
+      first-run and empty states, wording. Work through "UX notes" below.
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**
+
+## UX notes (owner feedback for the UX pass; add as it comes in)
+- (none yet)
 
 ## Backlog (not in MVP)
 - kg units setting (profile.unit_system exists; replace the lb constants: WEIGHT_UNIT, UNIT in screens, body/plan screens)
