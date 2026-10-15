@@ -115,6 +115,10 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   effort/"couldn't finish" row after ✓; timer bar at bottom. iOS can't alert when the PWA is backgrounded.
 - Never use window.confirm/alert/prompt: iOS Safari (esp. home-screen apps) can silently block them (Finish "did
   nothing"). Use `useConfirm()` from `src/components/ConfirmProvider.tsx` (in-app bottom sheet).
+- Swap ranking (`src/lib/swap.ts`): shares a primary muscle + doable at the gym; staples first (`src/lib/staples.ts`,
+  data), then same muscles/mechanic/force/equipment/name words; expert/olympic/risky (guillotine, behind-the-neck…)
+  sink. Swap mid-exercise keeps logged sets and continues in a new card. "Not at this gym" defaults to also replacing
+  the exercise in the weekly plan.
 - Allowed values are text + CHECK constraints, not Postgres enums (easier to extend).
 - Supabase "publishable"/anon key is safe in the frontend because RLS protects data. The service-role key is
   never in frontend code or the repo.
@@ -154,7 +158,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] 2.4 Logger: Start/Resume (Today card, Train, day editor, empty workout), full-screen `/workout/:id`,
         one expanded set, ✓ logs pre-filled values, tap number to type, changes carry to later pending sets,
         optional RIR / couldn't-finish row, warm-up toggle, add set/exercise, finish (drops undone sets), delete
-  - [ ] 2.5 Swap + "Not at this gym"
+  - [x] 2.5 Swap (logger + day editor), ⋯ menu: Not at this gym / remove; More → gym page (equipment, restore hidden)
   - [ ] 2.6 Rest timer, wake lock, warm-ups
   - [ ] 2.7 Finish summary + workout history
 - [ ] **Phase 3: progress views and charts**

@@ -8,6 +8,7 @@ import { AppLayout } from '@/components/AppLayout'
 import { DataProvider } from '@/data/DataProvider'
 import { DayEditorScreen } from '@/screens/DayEditorScreen'
 import { FoodScreen } from '@/screens/FoodScreen'
+import { GymScreen } from '@/screens/GymScreen'
 import { MoreScreen } from '@/screens/MoreScreen'
 import { ProgressScreen } from '@/screens/ProgressScreen'
 import { SignInScreen } from '@/screens/SignInScreen'
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
           { path: '/food', element: <FoodScreen /> },
           { path: '/progress', element: <ProgressScreen /> },
           { path: '/more', element: <MoreScreen /> },
+              { path: '/more/gym', element: <GymScreen /> },
             ],
           },
         ],

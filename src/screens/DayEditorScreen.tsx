@@ -1,8 +1,9 @@
-import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowLeftRight, ArrowUp, ChevronDown, ChevronLeft, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { ExercisePicker } from '@/components/ExercisePicker'
 import { Stepper } from '@/components/Stepper'
+import { SwapSheet } from '@/components/SwapSheet'
 import { useData } from '@/data/DataProvider'
 import { useTemplateDay, type DayExercise } from '@/data/queries'
 import { useStartWorkout } from '@/data/useStartWorkout'
@@ -18,6 +19,7 @@ export function DayEditorScreen() {
   const [picking, setPicking] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
   const start = useStartWorkout()
+  const [swapping, setSwapping] = useState<DayExercise | null>(null)
   const usedIds = useMemo(() => new Set(data?.items.map((it) => it.exercise_id)), [data])
 
   if (data === undefined) return null
@@ -90,6 +92,7 @@ export function DayEditorScreen() {
                 onToggle={() => setOpenId(openId === item.id ? null : item.id)}
                 onMoveUp={i > 0 ? () => void move(i, -1) : undefined}
                 onMoveDown={i < items.length - 1 ? () => void move(i, 1) : undefined}
+                onSwap={() => setSwapping(item)}
               />
             ))}
           </ul>
@@ -102,6 +105,18 @@ export function DayEditorScreen() {
             + Add exercise
           </button>
         </>
+      )}
+
+      {swapping?.exercise && (
+        <SwapSheet
+          target={swapping.exercise}
+          excludeIds={usedIds}
+          onClose={() => setSwapping(null)}
+          onPick={(e) => {
+            void store.update('plan_template_exercises', swapping.id, { exercise_id: e.id })
+            setSwapping(null)
+          }}
+        />
       )}
 
       {picking && (
@@ -121,8 +136,9 @@ function ExerciseRow(props: {
   onToggle: () => void
   onMoveUp?: () => void
   onMoveDown?: () => void
+  onSwap: () => void
 }) {
-  const { item, open, onToggle, onMoveUp, onMoveDown } = props
+  const { item, open, onToggle, onMoveUp, onMoveDown, onSwap } = props
   const { store } = useData()
   const update = (changes: Partial<DayExercise>) => {
     // Strip the joined exercise before saving.
@@ -175,6 +191,9 @@ function ExerciseRow(props: {
             <IconButton label="Move down" onClick={onMoveDown}>
               <ArrowDown size={20} />
             </IconButton>
+            <button type="button" onClick={onSwap} className="flex min-h-12 items-center gap-2 rounded-xl bg-surface-2 px-3">
+              <ArrowLeftRight size={18} /> Swap
+            </button>
             <button
               type="button"
               onClick={() => void store.remove('plan_template_exercises', item.id)}

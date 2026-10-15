@@ -1,10 +1,13 @@
+import { ChevronRight, Dumbbell } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { useAuth } from '@/auth/AuthProvider'
 import { useConfirm } from '@/components/ConfirmProvider'
 import { Placeholder } from '@/components/Placeholder'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { SyncStatusCard } from '@/components/SyncStatusCard'
 import { useData } from '@/data/DataProvider'
+import { useMainGym } from '@/data/queries'
 import { supabase } from '@/lib/supabase'
 
 export function MoreScreen() {
@@ -12,6 +15,7 @@ export function MoreScreen() {
   const { db, sync } = useData()
   const [signingOut, setSigningOut] = useState(false)
   const confirm = useConfirm()
+  const gymInfo = useMainGym()
 
   async function signOut() {
     setSigningOut(true)
@@ -38,7 +42,17 @@ export function MoreScreen() {
       <ScreenHeader title="More" subtitle={session?.user.email} />
       <div className="space-y-3">
         <SyncStatusCard />
-        <Placeholder phase={5}>Profile, equipment profiles, timer and effort settings</Placeholder>
+        <Link to="/more/gym" className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface px-4">
+          <Dumbbell size={20} className="text-muted" aria-hidden />
+          <span className="flex-1">
+            {gymInfo?.gym?.name ?? 'Gym'}
+            <span className="block text-xs text-muted">
+              Equipment{gymInfo?.unavailableIds.size ? ` · ${gymInfo.unavailableIds.size} hidden exercise(s)` : ''}
+            </span>
+          </span>
+          <ChevronRight size={20} className="text-muted" aria-hidden />
+        </Link>
+        <Placeholder phase={5}>Profile, timer and effort settings</Placeholder>
         <Placeholder phase={6}>Export all data as CSV</Placeholder>
         <button
           type="button"

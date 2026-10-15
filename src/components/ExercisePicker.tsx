@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useData } from '@/data/DataProvider'
+import { useMainGym } from '@/data/queries'
 import type { Exercise } from '@/data/types'
 import { filterExercises, MUSCLE_GROUPS } from '@/lib/training'
 
@@ -19,14 +20,22 @@ const MAX_RESULTS = 80
 export function ExercisePicker({ title = 'Add exercise', excludeIds, initialMuscles = null, onPick, onClose }: Props) {
   const { db } = useData()
   const exercises = useLiveQuery(() => db.exercises.toArray(), [db])
-  const gym = useLiveQuery(async () => (await db.equipment_profiles.toArray()).find((p) => p.is_default && !p.deleted_at), [db])
+  const gymInfo = useMainGym()
+  const gym = gymInfo?.gym
   const [query, setQuery] = useState('')
   const [muscles, setMuscles] = useState<string[] | null>(initialMuscles)
   const [onlyMyGym, setOnlyMyGym] = useState(true)
 
   const results = useMemo(
-    () => filterExercises(exercises ?? [], { query, muscles, equipment: onlyMyGym && gym ? gym.equipment : null, excludeIds }),
-    [exercises, query, muscles, onlyMyGym, gym, excludeIds],
+    () =>
+      filterExercises(exercises ?? [], {
+        query,
+        muscles,
+        equipment: onlyMyGym && gym ? gym.equipment : null,
+        // "Not at this gym" exercises are hidden while the gym filter is on.
+        excludeIds: new Set([...(excludeIds ?? []), ...(onlyMyGym ? (gymInfo?.unavailableIds ?? []) : [])]),
+      }),
+    [exercises, query, muscles, onlyMyGym, gym, gymInfo, excludeIds],
   )
 
   const chip = (active: boolean) =>

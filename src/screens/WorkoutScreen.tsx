@@ -1,12 +1,15 @@
-import { Check, ChevronLeft, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeftRight, Check, ChevronLeft, Ellipsis, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useConfirm } from '@/components/ConfirmProvider'
 import { ExercisePicker } from '@/components/ExercisePicker'
+import { Sheet, SheetAction } from '@/components/Sheet'
+import { SwapSheet } from '@/components/SwapSheet'
 import { Stepper } from '@/components/Stepper'
 import { useData } from '@/data/DataProvider'
-import { useWorkout, type WorkoutItem } from '@/data/queries'
-import type { WorkoutSet } from '@/data/types'
+import { useMainGym, useWorkout, type WorkoutItem } from '@/data/queries'
+import { markUnavailable, replaceInPlan, swapInWorkout } from '@/data/swap'
+import type { Exercise, WorkoutSet } from '@/data/types'
 import { addExercise, addSet, discardWorkout, finishWorkout } from '@/data/workouts'
 import { cascadeIds, currentSetIndex, formatElapsed, formatLastTime, formatWeight } from '@/lib/logger'
 import { defaultRepRange } from '@/lib/training'
@@ -33,6 +36,9 @@ export function WorkoutScreen() {
   const [picking, setPicking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const confirm = useConfirm()
+  const gymInfo = useMainGym()
+  const [menuFor, setMenuFor] = useState<WorkoutItem | null>(null)
+  const [swapFor, setSwapFor] = useState<{ item: WorkoutItem; planDefault: boolean } | null>(null)
   const usedIds = useMemo(() => new Set(data?.items.map((it) => it.we.exercise_id)), [data])
 
   if (data === undefined) return null
@@ -74,6 +80,25 @@ export function WorkoutScreen() {
     } catch (e) {
       setError(`Couldn't finish: ${e instanceof Error ? e.message : String(e)}`)
     }
+  }
+
+  async function swap(item: WorkoutItem, next: Exercise, alsoInPlan: boolean) {
+    setSwapFor(null)
+    await swapInWorkout(store, item.we, next)
+    if (alsoInPlan) await replaceInPlan(store, item.we.exercise_id, next.id)
+  }
+
+  async function notAtThisGym(item: WorkoutItem) {
+    setMenuFor(null)
+    if (gymInfo?.gym) await markUnavailable(store, gymInfo.gym.id, item.we.exercise_id)
+    // Straight to picking a replacement; default to fixing the weekly plan too, since the gym won't have it next time either.
+    setSwapFor({ item, planDefault: true })
+  }
+
+  async function removeFromWorkout(item: WorkoutItem) {
+    setMenuFor(null)
+    for (const s of item.sets.filter((s) => !s.completed_at)) await store.remove('sets', s.id)
+    if (!item.sets.some((s) => s.completed_at)) await store.remove('workout_exercises', item.we.id)
   }
 
   async function discard() {
@@ -122,6 +147,8 @@ export function WorkoutScreen() {
             justDoneId={justDoneId}
             onEdit={(id) => setEditingId(editingId === id ? null : id)}
             onComplete={(s) => void complete(s)}
+            onSwap={() => setSwapFor({ item, planDefault: false })}
+            onMenu={() => setMenuFor(item)}
           />
         ))}
 
@@ -146,6 +173,34 @@ export function WorkoutScreen() {
         </button>
       </main>
 
+      {menuFor && (
+        <Sheet title={menuFor.exercise?.name ?? 'Exercise'} onClose={() => setMenuFor(null)}>
+          <SheetAction onClick={() => { const it = menuFor; setMenuFor(null); setSwapFor({ item: it, planDefault: false }) }}>
+            Swap for another exercise
+          </SheetAction>
+          <SheetAction
+            onClick={() => void notAtThisGym(menuFor)}
+            detail={`Hide it at ${gymInfo?.gym?.name ?? 'this gym'} and pick a replacement. Undo in More → ${gymInfo?.gym?.name ?? 'Gym'}.`}
+          >
+            Not at this gym
+          </SheetAction>
+          <SheetAction danger onClick={() => void removeFromWorkout(menuFor)} detail="Logged sets are kept.">
+            Remove from this workout
+          </SheetAction>
+        </Sheet>
+      )}
+
+      {swapFor?.item.exercise && (
+        <SwapSheet
+          target={swapFor.item.exercise}
+          excludeIds={usedIds}
+          planOption
+          planDefault={swapFor.planDefault}
+          onClose={() => setSwapFor(null)}
+          onPick={(e, alsoInPlan) => void swap(swapFor.item, e, alsoInPlan)}
+        />
+      )}
+
       {picking && (
         <ExercisePicker
           excludeIds={usedIds}
@@ -167,8 +222,10 @@ function ExerciseCard(props: {
   justDoneId: string | null
   onEdit: (id: string) => void
   onComplete: (set: WorkoutSet) => void
+  onSwap: () => void
+  onMenu: () => void
 }) {
-  const { item, isActive, editingId, justDoneId, onEdit, onComplete } = props
+  const { item, isActive, editingId, justDoneId, onEdit, onComplete, onSwap, onMenu } = props
   const { store } = useData()
   const current = currentSetIndex(item.sets)
   const lastTime = formatLastTime(item.last, UNIT)
@@ -176,9 +233,17 @@ function ExerciseCard(props: {
 
   return (
     <section className="rounded-2xl border border-border bg-surface">
-      <div className="px-4 pt-3">
-        <h2 className="font-semibold">{item.exercise?.name ?? 'Unknown exercise'}</h2>
-        <p className="text-sm text-muted">{lastTime ? `Last time: ${lastTime}` : 'First time: pick a starting weight'}</p>
+      <div className="flex items-start gap-1 pl-4 pr-1 pt-2">
+        <div className="min-w-0 flex-1 pt-1">
+          <h2 className="font-semibold">{item.exercise?.name ?? 'Unknown exercise'}</h2>
+          <p className="text-sm text-muted">{lastTime ? `Last time: ${lastTime}` : 'First time: pick a starting weight'}</p>
+        </div>
+        <button type="button" onClick={onSwap} className="flex min-h-12 items-center gap-1 rounded-xl px-2 text-sm text-muted">
+          <ArrowLeftRight size={18} /> Swap
+        </button>
+        <button type="button" onClick={onMenu} aria-label="More options" className="grid size-12 place-items-center text-muted">
+          <Ellipsis size={20} />
+        </button>
       </div>
 
       <ul className="mt-2">
