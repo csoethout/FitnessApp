@@ -9,9 +9,11 @@ import { DataProvider } from '@/data/DataProvider'
 import { DayEditorScreen } from '@/screens/DayEditorScreen'
 import { FoodScreen } from '@/screens/FoodScreen'
 import { GymScreen } from '@/screens/GymScreen'
+import { HistoryScreen } from '@/screens/HistoryScreen'
 import { MoreScreen } from '@/screens/MoreScreen'
 import { ProgressScreen } from '@/screens/ProgressScreen'
 import { SignInScreen } from '@/screens/SignInScreen'
+import { SummaryScreen } from '@/screens/SummaryScreen'
 import { TodayScreen } from '@/screens/TodayScreen'
 import { TrainScreen } from '@/screens/TrainScreen'
 import { WorkoutScreen } from '@/screens/WorkoutScreen'
@@ -37,6 +39,8 @@ const router = createBrowserRouter([
           { path: '/', element: <TodayScreen /> },
           { path: '/train', element: <TrainScreen /> },
           { path: '/train/day/:dayId', element: <DayEditorScreen /> },
+              { path: '/history', element: <HistoryScreen /> },
+              { path: '/history/:workoutId', element: <SummaryScreen /> },
           { path: '/food', element: <FoodScreen /> },
           { path: '/progress', element: <ProgressScreen /> },
           { path: '/more', element: <MoreScreen /> },

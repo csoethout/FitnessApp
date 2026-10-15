@@ -123,6 +123,9 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   sets rest 60 s; otherwise the plan's rest (3/2/1 min). Beep is Web Audio scheduled at the ✓ tap (iOS needs a tap
   to unlock audio; the silent switch mutes it; no sound when the screen is locked, hence the wake lock).
   No timer after the workout's last set.
+- Stats (`src/lib/stats.ts`): e1RM = Epley, 1–10 reps, completed `working` sets only (warm-up and `limited`
+  excluded). Volume = weight × reps of completed non-warm-up sets (limited included). PRs (e1RM, heaviest set) only
+  vs workouts that started earlier; none the first time an exercise is logged. All computed, never stored.
 - Allowed values are text + CHECK constraints, not Postgres enums (easier to extend).
 - Supabase "publishable"/anon key is safe in the frontend because RLS protects data. The service-role key is
   never in frontend code or the repo.
@@ -165,7 +168,9 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] 2.5 Swap (logger + day editor), "Not at this gym" (logger ⋯ menu + day editor button), remove; More → gym page
   - [x] 2.6 Rest timer bar (auto-start, ±15, 1/2/3 min, skip, beep + mute, survives reload), wake lock,
         warm-up offer on first compound (bar×10, 50%×5, 70%×3, 85%×1; ≥10 lb jumps)
-  - [ ] 2.7 Finish summary + workout history
+  - [x] 2.7 Finish → summary (time, sets, volume, PRs vs earlier sessions, est. 1RM per exercise, edit/delete),
+        History list (Train → Recent workouts / See all, `/history`, `/history/:id`)
+  - [ ] Owner: test 2.7 on iPhone → Phase 2 done
 - [ ] **Phase 3: progress views and charts**
 - [ ] **Phase 4: body weight (+ body fat %, muscle mass) and food/macro tracking**
 - [ ] **Phase 5: rules-based planner, Plan my week, equipment profiles, cardio logging**

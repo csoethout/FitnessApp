@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { HistoryList } from '@/components/HistoryList'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { TodayWorkoutCard } from '@/components/TodayWorkoutCard'
 import { useData } from '@/data/DataProvider'
@@ -43,6 +44,13 @@ function WeekOverview({ days }: { days: NonNullable<ReturnType<typeof useActiveW
         ))}
       </ul>
       <p className="px-1 text-xs text-muted">Tap a day to change its name or exercises.</p>
+      <div className="flex items-baseline justify-between px-1 pt-3">
+        <h2 className="font-semibold">Recent workouts</h2>
+        <Link to="/history" className="min-h-10 text-sm text-accent">
+          See all
+        </Link>
+      </div>
+      <HistoryList limit={3} />
     </div>
   )
 }

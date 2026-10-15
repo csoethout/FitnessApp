@@ -88,7 +88,8 @@ export function WorkoutScreen() {
     if (!ok) return
     try {
       await finishWorkout(store, workout.id)
-      navigate('/train')
+      restTimer.skip()
+      navigate(`/history/${workout.id}?new=1`)
     } catch (e) {
       setError(`Couldn't finish: ${e instanceof Error ? e.message : String(e)}`)
     }
@@ -132,7 +133,11 @@ export function WorkoutScreen() {
   return (
     <div className="flex h-full flex-col">
       <header className="flex items-center gap-2 border-b border-border bg-surface px-2 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
-        <Link to="/train" aria-label="Leave (workout keeps running)" className="grid size-12 place-items-center text-muted">
+        <Link
+          to={finished ? `/history/${workout.id}` : '/train'}
+          aria-label={finished ? 'Back to summary' : 'Leave (workout keeps running)'}
+          className="grid size-12 place-items-center text-muted"
+        >
           <ChevronLeft />
         </Link>
         <div className="min-w-0 flex-1">
