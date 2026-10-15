@@ -1,5 +1,5 @@
 import { ChevronRight, Trophy } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { Placeholder } from '@/components/Placeholder'
 import { ScreenHeader } from '@/components/ScreenHeader'
@@ -10,6 +10,7 @@ import {
   chooseMetric, prEvents, recentChange, sessionPoints, startOfWeek, weeklyMuscleSets, weeklyVolume, type Metric,
 } from '@/lib/progress'
 import { formatMetric, metricLabel } from '@/lib/progressFormat'
+import { MUSCLE_GROUPS } from '@/lib/training'
 import type { WeightUnit } from '@/lib/units'
 
 const UNIT: WeightUnit = 'lb'
@@ -41,6 +42,9 @@ export function ProgressScreen() {
 function Strength() {
   const data = useProgressData()
   const [now] = useState(() => new Date())
+  // null = main lifts only (keeps the list short); otherwise a muscle group label from MUSCLE_GROUPS.
+  const [group, setGroup] = useState<string | null>(null)
+  const liftsRef = useRef<HTMLElement>(null)
 
   const model = useMemo(() => {
     if (!data) return null
@@ -61,6 +65,7 @@ function Strength() {
           id,
           name: exercises.get(id)?.name ?? 'Exercise',
           main: mainLiftIds.has(id),
+          groups: MUSCLE_GROUPS.filter((g) => g.muscles.some((m) => exercises.get(id)?.primary_muscles.includes(m))).map((g) => g.label),
           metric,
           values: points.map((p) => p[metric]).filter((v): v is number => v !== null),
           current: last?.[metric] ?? null,
@@ -104,14 +109,47 @@ function Strength() {
     return <p className="rounded-2xl border border-dashed border-border p-6 text-center text-muted">Log a workout to see your progress here.</p>
   }
 
+  const shown = group ? model.lifts.filter((l) => l.groups.includes(group)) : model.lifts.filter((l) => l.main)
+  const pick = (g: string | null, scroll = false) => {
+    setGroup(g)
+    requestAnimationFrame(() => {
+      // Keep the selected chip visible in the sideways-scrolling row, then (from a bar tap) bring the list into view.
+      liftsRef.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' })
+      if (scroll) liftsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
+  const chip = (active: boolean) =>
+    `min-h-10 shrink-0 rounded-full border px-3 text-sm ${active ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted'}`
+
   return (
     <div className="space-y-4">
-      <ThisWeek muscles={model.muscles} thisWeek={model.thisWeek} prevWeek={model.prevWeek} />
+      <ThisWeek
+        muscles={model.muscles}
+        thisWeek={model.thisWeek}
+        prevWeek={model.prevWeek}
+        selected={group}
+        onSelect={(g) => pick(g === group ? null : g, g !== group)}
+      />
       <VolumeWeeks weeks={model.volume} />
-      <section>
+      <section ref={liftsRef} className="scroll-mt-4">
         <h2 className="mb-2 px-1 font-semibold">Your lifts</h2>
-        <ul className="overflow-hidden rounded-2xl border border-border bg-surface">
-          {model.lifts.map((l) => (
+        <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4">
+          <button type="button" aria-pressed={group === null} onClick={() => pick(null)} className={chip(group === null)}>
+            ★ Main lifts
+          </button>
+          {MUSCLE_GROUPS.map((g) => (
+            <button key={g.label} type="button" aria-pressed={group === g.label} onClick={() => pick(g.label)} className={chip(group === g.label)}>
+              {g.label}
+            </button>
+          ))}
+        </div>
+        {shown.length === 0 && (
+          <p className="rounded-2xl border border-dashed border-border p-4 text-center text-sm text-muted">
+            {group ? `No ${group.toLowerCase()} lifts logged yet.` : 'No main lifts logged yet. Mark exercises as main lifts in your week, or pick a muscle group.'}
+          </p>
+        )}
+        <ul className={`overflow-hidden rounded-2xl border border-border bg-surface ${shown.length ? '' : 'hidden'}`}>
+          {shown.map((l) => (
             <li key={l.id} className="border-b border-border last:border-b-0">
               <Link to={`/progress/exercise/${l.id}`} className="flex min-h-16 items-center gap-3 px-4 py-2">
                 <span className="min-w-0 flex-1">
@@ -162,8 +200,14 @@ function Strength() {
 }
 
 /** Sets per muscle group this week as horizontal bars, with a faint marker at the 10-set target. */
-function ThisWeek(props: { muscles: { label: string; sets: number }[]; thisWeek: number; prevWeek: number }) {
-  const { muscles, thisWeek, prevWeek } = props
+function ThisWeek(props: {
+  muscles: { label: string; sets: number }[]
+  thisWeek: number
+  prevWeek: number
+  selected: string | null
+  onSelect: (label: string) => void
+}) {
+  const { muscles, thisWeek, prevWeek, selected, onSelect } = props
   const max = Math.max(SET_TARGET + 4, ...muscles.map((m) => m.sets))
   const pct = prevWeek > 0 ? Math.round(((thisWeek - prevWeek) / prevWeek) * 100) : null
   return (
@@ -175,16 +219,26 @@ function ThisWeek(props: { muscles: { label: string; sets: number }[]; thisWeek:
           {pct !== null && <span className={pct >= 0 ? 'text-accent' : ''}> · {pct >= 0 ? '+' : ''}{pct}% vs last week</span>}
         </p>
       </div>
-      <p className="mb-2 text-xs text-muted">Working sets per muscle group · line = {SET_TARGET} sets</p>
-      <ul className="space-y-2">
+      <p className="mb-1 text-xs text-muted">Working sets per muscle group · line = {SET_TARGET} sets · tap one to see its lifts</p>
+      <ul>
         {muscles.map((m) => (
-          <li key={m.label} className="flex items-center gap-3">
-            <span className="w-20 text-sm">{m.label}</span>
-            <span className="relative h-3 flex-1" aria-hidden>
-              <span className="absolute inset-y-0 left-0 rounded-r-[4px] bg-chart" style={{ width: `${(m.sets / max) * 100}%` }} />
-              <span className="absolute -inset-y-1 w-px bg-muted/60" style={{ left: `${(SET_TARGET / max) * 100}%` }} />
-            </span>
-            <span className="w-6 text-right text-sm tabular-nums">{m.sets}</span>
+          <li key={m.label}>
+            <button
+              type="button"
+              aria-pressed={selected === m.label}
+              aria-label={`${m.label}: ${m.sets} sets this week. Show ${m.label.toLowerCase()} lifts`}
+              onClick={() => onSelect(m.label)}
+              className={`-mx-2 flex min-h-11 w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 text-left ${
+                selected === m.label ? 'bg-surface-2' : ''
+              }`}
+            >
+              <span className={`w-20 text-sm ${selected === m.label ? 'font-semibold' : ''}`}>{m.label}</span>
+              <span className="relative h-3 flex-1" aria-hidden>
+                <span className="absolute inset-y-0 left-0 rounded-r-[4px] bg-chart" style={{ width: `${(m.sets / max) * 100}%` }} />
+                <span className="absolute -inset-y-1 w-px bg-muted/60" style={{ left: `${(SET_TARGET / max) * 100}%` }} />
+              </span>
+              <span className="w-6 text-right text-sm tabular-nums">{m.sets}</span>
+            </button>
           </li>
         ))}
       </ul>

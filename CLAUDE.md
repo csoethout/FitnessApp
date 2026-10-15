@@ -181,7 +181,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] 3.1 Calculations (`src/lib/progress.ts`): weeks (Sun start), sets per muscle group, weekly volume,
         per-session points, metric choice, 4-week change, PR events — unit tested
   - [x] 3.2 Progress tab (Strength | Body placeholder): this week (sets/muscle + volume vs last week), 8-week volume,
-        your lifts (main first, sparkline, 4-wk change), recent PRs (one line per exercise, max 5)
+        your lifts (★ main lifts by default; muscle-group chips or tap a This-week bar to filter; sparkline, 4-wk change), recent PRs (one line per exercise, max 5)
   - [x] 3.3 Lift detail `/progress/exercise/:id` (lazy-loaded Recharts): trend line, metric chips, best-ever, sessions
   - [x] Owner: test Phase 3 on iPhone
   - [x] Warm-ups reduced to 1–2 sets (owner request); More → Testing tools (sample workouts / delete all workouts)
