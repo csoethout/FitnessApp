@@ -13,7 +13,8 @@ import { markUnavailable, replaceInPlan, swapInWorkout } from '@/data/swap'
 import type { Exercise, WorkoutSet } from '@/data/types'
 import { addExercise, addSet, addWarmups, discardWorkout, finishWorkout } from '@/data/workouts'
 import { cascadeIds, currentSetIndex, formatElapsed, formatLastTime, formatWeight } from '@/lib/logger'
-import { restTimer, unlockAudio } from '@/lib/restTimer'
+import { unlockAudio } from '@/lib/beep'
+import { restTimer } from '@/lib/restTimer'
 import { defaultRepRange, restAfterSet } from '@/lib/training'
 import { useWakeLock } from '@/lib/useWakeLock'
 import { warmupPlan } from '@/lib/warmup'
@@ -131,7 +132,8 @@ export function WorkoutScreen() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    // Any tap on the logger unlocks audio for the end-of-rest beep (iOS requirement).
+    <div className="flex h-full flex-col" onPointerDown={unlockAudio}>
       <header className="flex items-center gap-2 border-b border-border bg-surface px-2 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
         <Link
           to={finished ? `/history/${workout.id}` : '/train'}

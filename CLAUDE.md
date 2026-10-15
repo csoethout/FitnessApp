@@ -120,9 +120,10 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   sink. Swap mid-exercise keeps logged sets and continues in a new card. "Not at this gym" defaults to also replacing
   the exercise in the weekly plan.
 - Rest timer (`src/lib/restTimer.ts`): stored as an end time in localStorage (per-device, not synced). Warm-up
-  sets rest 60 s; otherwise the plan's rest (3/2/1 min). Beep is Web Audio scheduled at the ✓ tap (iOS needs a tap
-  to unlock audio; the silent switch mutes it; no sound when the screen is locked, hence the wake lock).
-  No timer after the workout's last set.
+  sets rest 60 s; otherwise the plan's rest (3/2/1 min). No timer after the workout's last set.
+- Beep (`src/lib/beep.ts`): iOS needs audio *played* during a tap → any pointerdown in the logger plays a silent
+  1-sample buffer. The beep is played when the timer hits zero (not pre-scheduled; iOS dropped that) and only if
+  it ended <10 s ago. Web Audio mixes with music and obeys the silent switch. More → "Test rest sound".
 - Stats (`src/lib/stats.ts`): e1RM = Epley, 1–10 reps, completed `working` sets only (warm-up and `limited`
   excluded). Volume = weight × reps of completed non-warm-up sets (limited included). PRs (e1RM, heaviest set) only
   vs workouts that started earlier; none the first time an exercise is logged. All computed, never stored.

@@ -1,7 +1,8 @@
 import { Volume2, VolumeX } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { beep } from '@/lib/beep'
 import { formatElapsed } from '@/lib/logger'
-import { restTimer, scheduleBeep, useRestTimer } from '@/lib/restTimer'
+import { restTimer, useRestTimer } from '@/lib/restTimer'
 import { useNow } from '@/lib/useNow'
 
 /**
@@ -16,10 +17,14 @@ export function RestTimerBar({ workoutId }: { workoutId: string }) {
   const remaining = mine ? Math.min(mine.endsAt - now, mine.total * 1000) : 0
   const over = Boolean(mine) && remaining <= 0
 
-  // (Re)schedule the end-of-rest beep whenever the timer or the sound setting changes.
+  // Beep once when this timer reaches zero (keyed by its end time, so ±15 / restarts get their own beep).
+  const beepedFor = useRef<number | null>(null)
   useEffect(() => {
-    scheduleBeep(mine && sound ? mine.endsAt : null)
-  }, [mine, sound])
+    if (!mine || !over || beepedFor.current === mine.endsAt) return
+    beepedFor.current = mine.endsAt
+    // Only if it just ended (not when reopening the app long after).
+    if (sound && remaining > -10_000) void beep()
+  }, [mine, over, sound, remaining])
 
   // Clear a finished timer after a minute so it doesn't linger.
   useEffect(() => {
