@@ -150,7 +150,13 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   Weight = 7-day average of weigh-ins. User nudges are OFFSETS (profile.settings.nutritionAdjust) so they survive
   recalculation. Guardrails on the total: ≥ max(sex floor 1500/1200, 75% of maintenance); fat ≥0.25 g/lb.
   Today's `nutrition_targets` row is kept equal to the plan by `TargetKeeper`; past days keep their row.
-  Biweekly trend-based adjustment is still Phase 5.
+  2-week check-in (`src/lib/planner/checkIn.ts`, step 5.2): due 14 days after the goal start / last check-in;
+  weight trend = least-squares rate over 14 days (≥4 weigh-ins spanning ≥7 days) as % of body weight vs the goal's
+  `ratePctWeek` (recomp −0.25, cut −0.6, maintain 0, strength +0.1, bulk +0.25); within ±0.2 → on track; else ±100
+  (±150 beyond 0.4); losing >1%/week → +150. Suggested on Food (today) and the plan page; applied only when the
+  user taps Apply ("Keep as is" also resets the clock). Stored in profile.settings.checkIns; only entries since the
+  current goal's start count; their sum is added to the nudges and guardrails apply to the total; no cut is
+  suggested when already at the calorie floor. "Reset" on the plan page zeroes them.
 - Profiles sync: keyed by user id (OWNER_COLUMN 'id'); server allows UPDATE only (row created at sign-up), so
   `supabaseRemote` updates instead of upserting and strips `deleted_at`. Goals: one active row, changed in place.
 - Allowed values are text + CHECK constraints, not Postgres enums (easier to extend).
@@ -253,7 +259,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 - [ ] **Phase 5: rules-based planner, Plan my week, equipment profiles, cardio logging**
   - [x] 5.1 Progression targets: double progression pre-fills each exercise; logger shows rep range + reason
         (↑ green weight increase, ↓ amber deload)
-  - [ ] 5.2 Biweekly calorie check-in (weight trend vs goal rate → ±100–150 kcal within guardrails)
+  - [x] 5.2 Biweekly calorie check-in: card on Food/plan page when due → Apply / Keep as is; Reset on plan page
   - [ ] 5.3 Plan my week (per-day normal / short / busy / away; move, merge, shorten, swap)
   - [ ] 5.4 Equipment profiles, cardio logging, settings (units, timer/RIR toggles)
 - [ ] **Phase 6: PWA install, offline sync, CSV export**

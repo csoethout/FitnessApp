@@ -1,11 +1,13 @@
 import { ChevronLeft, Minus, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { CheckInCard } from '@/components/CheckInCard'
 import { Stepper } from '@/components/Stepper'
 import { saveWeighIn } from '@/data/body'
 import { useData } from '@/data/DataProvider'
-import { saveProfile, setGoal, setNutritionAdjust, useNutritionPlan, type PlanState } from '@/data/profile'
+import { resetCheckIns, saveProfile, setGoal, setNutritionAdjust, useNutritionPlan, type PlanState } from '@/data/profile'
 import { localDateKey } from '@/lib/body'
+import { formatDay } from '@/lib/dates'
 import { ACTIVITY, GOALS, type ActivityLevel, type Adjustments, type GoalType, type Sex } from '@/lib/planner/nutrition'
 import { kgToLb, lbToKg } from '@/lib/units'
 
@@ -56,6 +58,7 @@ function PlanView({ state, onEdit }: { state: PlanState; onEdit: () => void }) {
         <Tile label="Fat" value={String(plan.fat_g)} unit="g" />
       </div>
       {plan.limited && <p className="rounded-xl border border-amber-400/50 p-3 text-sm text-amber-400">{plan.limited}</p>}
+      <CheckInCard state={state} />
 
       <section className="rounded-2xl border border-border bg-surface p-4">
         <div className="mb-2 flex items-baseline justify-between">
@@ -78,6 +81,16 @@ function PlanView({ state, onEdit }: { state: PlanState; onEdit: () => void }) {
           {base.steps.map((s) => (
             <li key={s}>{s}</li>
           ))}
+          {state.checkIn.totalKcal !== 0 && (
+            <li>
+              2-week check-ins since {formatDay(state.goal!.start_date + 'T12:00:00')}: {state.checkIn.totalKcal > 0 ? '+' : '−'}
+              {Math.abs(state.checkIn.totalKcal)} kcal, based on your weight trend.{' '}
+              <button type="button" onClick={() => void resetCheckIns(store, state.goal!.start_date)} className="text-accent underline">
+                Reset
+              </button>
+            </li>
+          )}
+          <li>Every 2 weeks the app checks your weight trend against your goal and suggests ±100–150 kcal.</li>
         </ol>
       </section>
 

@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { localDateKey, rollingAverage } from '@/lib/body'
+import { checkInDue, checkInTotal, suggestCheckIn, type CheckIn, type CheckInSuggestion } from '@/lib/planner/checkIn'
 import { ageOn, computePlan, GOALS, type Adjustments, type GoalType, type NutritionPlan, type PlanInputs } from '@/lib/planner/nutrition'
 import { useData } from './DataProvider'
 import type { LocalDb } from './db'
@@ -42,6 +43,27 @@ export async function setNutritionAdjust(store: LocalStore, adjust: Adjustments)
   await saveProfile(store, { settings: { ...(profile?.settings ?? {}), nutritionAdjust: adjust } })
 }
 
+/** Save the result of a check-in (a change of 0 = "keep as is"; it still resets the 2-week clock). */
+export async function recordCheckIn(store: LocalStore, entry: CheckIn) {
+  const profile = await store.db.profiles.get(store.userId)
+  const settings = profile?.settings ?? {}
+  await saveProfile(store, { settings: { ...settings, checkIns: [...(settings.checkIns ?? []), entry] } })
+}
+
+/** Undo the check-in calorie changes for the current goal (back to the calculated plan + your nudges). */
+export async function resetCheckIns(store: LocalStore, goalStart: string) {
+  const profile = await store.db.profiles.get(store.userId)
+  const settings = profile?.settings ?? {}
+  const kept = (settings.checkIns ?? []).map((c) => (c.date >= goalStart ? { ...c, change_kcal: 0 } : c))
+  await saveProfile(store, { settings: { ...settings, checkIns: kept } })
+}
+
+export type CheckInState = {
+  due: boolean
+  suggestion: CheckInSuggestion | null // null when no plan yet
+  totalKcal: number // added by check-ins since the goal started
+}
+
 export type PlanState = {
   profile: Profile | null
   goal: Goal | null
@@ -51,6 +73,7 @@ export type PlanState = {
   adjust: Adjustments
   plan: NutritionPlan | null // with your nudges applied
   base: NutritionPlan | null // the plan before nudges
+  checkIn: CheckInState
 }
 
 export async function loadPlanState(db: LocalDb, userId: string, today: string): Promise<PlanState> {
@@ -68,16 +91,29 @@ export async function loadPlanState(db: LocalDb, userId: string, today: string):
   if (weightKg === null) missing.push('weight')
 
   const adjust = profile?.settings?.nutritionAdjust ?? NO_ADJUST
+  const checkIns = profile?.settings?.checkIns ?? []
+  const totalKcal = goal ? checkInTotal(checkIns, goal.start_date) : 0
   const inputs: PlanInputs | null = missing.length
     ? null
     : {
         sex: profile!.sex!, ageYears: ageOn(profile!.birth_date!, today), heightCm: profile!.height_cm!, weightKg: weightKg!,
         activity: profile!.activity_level!, goal: goal!.goal_type,
       }
+  // Check-ins ride on top of your nudges; the guardrails in computePlan apply to the total.
+  const withCheckIns = (extra: number) => ({ ...adjust, kcal: adjust.kcal + totalKcal + extra })
+  const plan = inputs ? computePlan(inputs, withCheckIns(0)) : null
+  let suggestion: CheckInSuggestion | null = null
+  if (inputs && goal) {
+    suggestion = suggestCheckIn(weighIns.map((m) => ({ date: m.measured_on, value: m.weight_kg! })), weightKg!, goal.goal_type, today)
+    // Already at the safety floor: a cut wouldn't change anything, so don't suggest one.
+    if (suggestion.status === 'adjust' && suggestion.change < 0 && computePlan(inputs, withCheckIns(suggestion.change)).kcal === plan!.kcal) {
+      suggestion = { ...suggestion, status: 'on-track', change: 0, message: `${suggestion.message.split(':')[0]}. Calories are already at the safety floor, so they stay where they are.` }
+    }
+  }
   return {
-    profile, goal, weightKg, missing, inputs, adjust,
-    plan: inputs ? computePlan(inputs, adjust) : null,
+    profile, goal, weightKg, missing, inputs, adjust, plan,
     base: inputs ? computePlan(inputs) : null,
+    checkIn: { due: !!goal && checkInDue(checkIns, goal.start_date, today), suggestion, totalKcal },
   }
 }
 

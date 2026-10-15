@@ -127,6 +127,8 @@ export type Profile = Timestamps & {
 export type ProfileSettings = {
   /** Your nudges on top of the calculated nutrition plan (kept when the plan recalculates). */
   nutritionAdjust?: { kcal: number; protein_g: number; fat_g: number }
+  /** Accepted 2-week calorie check-ins (src/lib/planner/checkIn.ts); their kcal changes add up on top of the plan. */
+  checkIns?: { date: string; rate_pct_week: number | null; change_kcal: number }[]
 }
 
 export type Goal = Owned & {

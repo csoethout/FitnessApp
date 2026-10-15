@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AddFoodSheet } from '@/components/AddFoodSheet'
+import { CheckInCard } from '@/components/CheckInCard'
 import { EntrySheet } from '@/components/EntrySheet'
 import { MacroBars } from '@/components/MacroBars'
 import { Sheet } from '@/components/Sheet'
@@ -10,6 +11,7 @@ import { useData } from '@/data/DataProvider'
 import { copyEntries, MEAL_SLOTS } from '@/data/food'
 import { useDayLog, useTargetOn } from '@/data/foodHooks'
 import { saveEntriesAsMeal } from '@/data/meals'
+import { useNutritionPlan } from '@/data/profile'
 import type { FoodLogEntry, MealSlot } from '@/data/types'
 import { localDateKey } from '@/lib/body'
 import { formatDay } from '@/lib/dates'
@@ -29,6 +31,7 @@ export function FoodScreen() {
   const foods = useLiveQuery(async () => new Map((await db.foods.toArray()).map((f) => [f.id, f])), [db])
   const prevEntries = useDayLog(yesterday)
   const target = useTargetOn(date)
+  const planState = useNutritionPlan()
   const [adding, setAdding] = useState<MealSlot | null>(null)
   const [editing, setEditing] = useState<FoodLogEntry | null>(null)
   const [saving, setSaving] = useState<{ slot: MealSlot; label: string; list: FoodLogEntry[] } | null>(null)
@@ -70,6 +73,7 @@ export function FoodScreen() {
           <p className="text-sm text-muted">Calories and protein calculated from your height, weight and goal.</p>
         </Link>
       ) : null}
+      {date === today && planState && <CheckInCard state={planState} />}
       <MacroBars eaten={totals} target={target} />
       {extras.length > 0 && (
         <p className="mt-2 text-center text-xs text-muted">
