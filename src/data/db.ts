@@ -39,5 +39,9 @@ export function openLocalDb(userId: string): LocalDb {
     outbox: '[table+id], table',
     meta: 'key',
   })
+  // v2 (Phase 4): weigh-ins. Dexie upgrades existing phones automatically; nothing is lost.
+  db.version(2).stores({
+    body_measurements: 'id, measured_on',
+  })
   return db
 }

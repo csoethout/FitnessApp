@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { STARTER_SPLIT } from '@/lib/starterSplit'
 import { openLocalDb } from './db'
-import { addSampleWorkouts, deleteAllWorkouts } from './sample'
+import { addSampleWeighIns, addSampleWorkouts, deleteAllWeighIns, deleteAllWorkouts } from './sample'
 import { applyStarterSplit } from './setup'
 import { LocalStore } from './store'
 import type { Exercise } from './types'
@@ -48,5 +48,18 @@ describe('sample data', () => {
     expect(live(await store.db.workouts.toArray())).toEqual([])
     expect(live(await store.db.sets.toArray())).toEqual([])
     expect(live(await store.db.plan_template_exercises.toArray()).length).toBeGreaterThan(30)
+  })
+})
+
+describe('sample weigh-ins', () => {
+  it('adds most days, skips days already logged, and can delete them all', async () => {
+    await store.insert('body_measurements', { measured_on: '2026-10-14', weight_kg: 90, body_fat_pct: null, muscle_mass_kg: null, note: null })
+    const n = await addSampleWeighIns(store, 6, new Date(2026, 9, 15))
+    expect(n).toBeGreaterThan(30)
+    expect(n).toBeLessThan(42)
+    const oct14 = (await store.db.body_measurements.where('measured_on').equals('2026-10-14').toArray())
+    expect(oct14.length).toBe(1)
+    expect(oct14[0].weight_kg).toBe(90) // untouched
+    expect(await deleteAllWeighIns(store)).toBe(n + 1)
   })
 })

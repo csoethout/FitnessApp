@@ -132,6 +132,12 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   most reps (bodyweight). Sets per muscle count once per PRIMARY muscle group, warm-ups excluded. Weekly target
   marker = 10 sets. Chart color `--color-chart` #16a34a (validated with the dataviz skill for the dark surface).
   Recharts is lazy-loaded only on the lift detail page; other charts are plain HTML/SVG.
+- Body trend (`src/lib/body.ts`): 7-day trailing average of readings (gaps OK); weekly rate = least-squares slope
+  over the last 14 days (needs ≥4 readings spanning ≥7 days). Dates are LOCAL YYYY-MM-DD (`localDateKey`).
+  One weigh-in per day: save re-uses that day's row (even soft-deleted) because of the server's unique rule.
+- Food search: the app calls USDA FoodData Central and Open Food Facts directly. The USDA key is a free,
+  read-only public-data key and is visible in the frontend bundle (accepted risk: only rate-limit abuse; rotate if
+  needed). Logged foods are saved as the user's own `foods` rows (no shared server cache).
 - Allowed values are text + CHECK constraints, not Postgres enums (easier to extend).
 - Supabase "publishable"/anon key is safe in the frontend because RLS protects data. The service-role key is
   never in frontend code or the repo.
@@ -186,6 +192,15 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] Owner: test Phase 3 on iPhone
   - [x] Warm-ups reduced to 1–2 sets (owner request); More → Testing tools (sample workouts / delete all workouts)
 - [ ] **Phase 4: body weight (+ body fat %, muscle mass) and food/macro tracking**
+  - [x] Owner: approved design (direct USDA/OFF calls from the app, USDA key in frontend; no Edge Function)
+  - [x] 4.1 Weigh-ins: Today card + sheet (weight / body fat % / muscle mass, each prefilled from its own latest
+        value), Progress → Body (dots + 7-day avg on a real time axis, weekly rate, 30/90/all, edit list, other day);
+        `body_measurements` synced (Dexie v2); testing tools add/delete sample weigh-ins
+  - [ ] Owner: get USDA key → Cloudflare build var `VITE_USDA_API_KEY`
+  - [ ] 4.2 Food log basics (day view, targets, meals, label entry, quick add, recent, copy yesterday)
+  - [ ] 4.3 Food search (USDA + Open Food Facts)
+  - [ ] 4.4 Barcode scanning
+  - [ ] 4.5 Saved meals / recipes
 - [ ] **Phase 5: rules-based planner, Plan my week, equipment profiles, cardio logging**
 - [ ] **Phase 6: PWA install, offline sync, CSV export**
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**

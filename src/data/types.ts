@@ -99,6 +99,14 @@ export type WorkoutSet = Owned & {
   completed_at: string | null // null = planned, not done yet
 }
 
+export type BodyMeasurement = Owned & {
+  measured_on: string // local date YYYY-MM-DD, one row per day
+  weight_kg: number | null
+  body_fat_pct: number | null
+  muscle_mass_kg: number | null
+  note: string | null
+}
+
 /** Tables the app reads and writes locally, mapped to their row types. */
 export type Tables = {
   exercises: Exercise
@@ -111,6 +119,7 @@ export type Tables = {
   workouts: Workout
   workout_exercises: WorkoutExercise
   sets: WorkoutSet
+  body_measurements: BodyMeasurement
 }
 
 export type TableName = keyof Tables
@@ -127,6 +136,7 @@ export const SYNC_ORDER: TableName[] = [
   'workouts',
   'workout_exercises',
   'sets',
+  'body_measurements',
 ]
 
 /** Column that identifies the owner. The exercises table uses owner_id (null for the shared catalog). */
@@ -141,4 +151,5 @@ export const OWNER_COLUMN: Record<TableName, 'user_id' | 'owner_id'> = {
   workouts: 'user_id',
   workout_exercises: 'user_id',
   sets: 'user_id',
+  body_measurements: 'user_id',
 }

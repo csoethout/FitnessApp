@@ -1,6 +1,7 @@
 // TESTING TOOL (remove before other people use the app; see Backlog).
 // Generates realistic past workouts from the active weekly plan so Progress/History can be tried out,
 // and wipes all workouts (soft delete, so phones and Supabase both forget them).
+import { localDateKey } from '@/lib/body'
 import { lbToKg } from '@/lib/units'
 import type { LocalStore } from './store'
 import type { Exercise, PlanTemplateExercise } from './types'
@@ -89,6 +90,42 @@ export async function addSampleWorkouts(store: LocalStore, weeks = 6, now = new 
     }
   })
   return count
+}
+
+/**
+ * Adds sample weigh-ins for the last `weeks` weeks (most days): ~211 lb drifting down ~0.6 lb/week with daily
+ * water swings, body fat every few days. Days that already have a weigh-in are left alone.
+ */
+export async function addSampleWeighIns(store: LocalStore, weeks = 6, now = new Date()): Promise<number> {
+  const { db } = store
+  const swing = [0.8, -0.6, 1.2, -0.4, 0.3, -1.0, 0.5]
+  let count = 0
+  await db.transaction('rw', [db.body_measurements, db.outbox], async () => {
+    for (let daysAgo = weeks * 7; daysAgo >= 1; daysAgo--) {
+      if (daysAgo % 6 === 4) continue // skip some days, like real life
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo)
+      const date = localDateKey(d)
+      if (await db.body_measurements.where('measured_on').equals(date).first()) continue
+      const lb = 211 - (weeks * 7 - daysAgo) * 0.09 + swing[daysAgo % 7]
+      await store.insert('body_measurements', {
+        measured_on: date, note: null, muscle_mass_kg: null,
+        weight_kg: Math.round(lbToKg(lb) * 10_000) / 10_000,
+        body_fat_pct: daysAgo % 3 === 0 ? Math.round((19.5 - (weeks * 7 - daysAgo) * 0.02) * 10) / 10 : null,
+      })
+      count++
+    }
+  })
+  return count
+}
+
+/** Deletes every weigh-in. */
+export async function deleteAllWeighIns(store: LocalStore): Promise<number> {
+  const { db } = store
+  return db.transaction('rw', [db.body_measurements, db.outbox], async () => {
+    const rows = live(await db.body_measurements.toArray())
+    for (const r of rows) await store.remove('body_measurements', r.id)
+    return rows.length
+  })
 }
 
 /** Deletes every workout (including one in progress) with its exercises and sets. Plan and gym are kept. */

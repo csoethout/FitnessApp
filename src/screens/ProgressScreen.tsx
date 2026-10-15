@@ -1,7 +1,7 @@
 import { ChevronRight, Trophy } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { Placeholder } from '@/components/Placeholder'
+import { BodyView } from '@/components/BodyView'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { Sparkline } from '@/components/Sparkline'
 import { useProgressData } from '@/data/progress'
@@ -34,7 +34,7 @@ export function ProgressScreen() {
           </button>
         ))}
       </div>
-      {tab === 'strength' ? <Strength /> : <Placeholder phase={4}>Body weight, body fat and muscle mass trends</Placeholder>}
+      {tab === 'strength' ? <Strength /> : <BodyView />}
     </>
   )
 }
