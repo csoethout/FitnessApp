@@ -170,3 +170,31 @@ export async function lookupBarcode(store: LocalStore, code: string, signal: Abo
   }
   return reached ? { kind: 'notfound' } : { kind: 'offline' }
 }
+
+type FoodNumbers = Pick<
+  Food,
+  'name' | 'brand' | 'serving_amount' | 'serving_unit' | 'serving_grams' | 'kcal' | 'protein_g' | 'carbs_g' | 'fat_g' | 'fiber_g' | 'sugar_g' | 'sat_fat_g' | 'trans_fat_g' | 'cholesterol_mg' | 'sodium_mg'
+>
+
+/**
+ * Correct one of your foods (e.g. the database had the wrong label). Log entries that were copied from the old,
+ * wrong numbers are corrected too; entries with other numbers (logged before an earlier change) are left alone.
+ */
+export async function correctFood(store: LocalStore, food: Food, changes: FoodNumbers): Promise<Food> {
+  const { db } = store
+  return db.transaction('rw', [db.foods, db.food_log_entries, db.outbox], async () => {
+    const updated = await store.update('foods', food.id, changes)
+    const same = (a: number, b: number) => Math.abs(a - b) < 0.05
+    const entries = live(await db.food_log_entries.toArray()).filter(
+      (e) => e.food_id === food.id && same(e.kcal_per_serving, food.kcal) && same(e.protein_g_per_serving, food.protein_g) && same(e.fat_g_per_serving, food.fat_g),
+    )
+    for (const e of entries) {
+      await store.update('food_log_entries', e.id, {
+        name: updated.brand ? `${updated.name} (${updated.brand})` : updated.name,
+        kcal_per_serving: updated.kcal, protein_g_per_serving: updated.protein_g, carbs_g_per_serving: updated.carbs_g, fat_g_per_serving: updated.fat_g,
+        ...extrasFromFood(updated),
+      })
+    }
+    return updated
+  })
+}

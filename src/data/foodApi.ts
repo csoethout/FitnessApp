@@ -1,5 +1,5 @@
 import { sameBarcode } from '@/lib/barcode'
-import { fromOff, fromUsda, type FoundFood, type OffProduct, type UsdaFood } from '@/lib/foodSearch'
+import { fromOff, fromUsda, fromUsdaLabel, newestFirst, type FoundFood, type OffProduct, type UsdaFood } from '@/lib/foodSearch'
 
 // Searches go straight from the phone to the free public APIs (see CLAUDE.md → Food search).
 // The USDA key is a free read-only key and ends up in the app bundle (accepted). Without one we use
@@ -56,12 +56,27 @@ async function retry<T>(fn: () => Promise<T>, signal: AbortSignal, tries = 3): P
   }
 }
 
-/** USDA branded foods by barcode: searches the number and keeps only exact barcode matches. */
+/**
+ * USDA branded foods by barcode: searches the number, keeps exact barcode matches, takes the newest record, then
+ * fetches its label panel (per serving, as printed). Falls back to the search's per-100 g values if that fails.
+ */
 export async function barcodeUsda(code: string, signal: AbortSignal): Promise<FoundFood | null> {
-  const q = new URLSearchParams({ api_key: USDA_KEY, query: code, dataType: 'Branded', pageSize: '10' })
+  const q = new URLSearchParams({ api_key: USDA_KEY, query: code, dataType: 'Branded', pageSize: '25' })
   const data = await retry(() => getJson<{ foods?: UsdaFood[] }>(`https://api.nal.usda.gov/fdc/v1/foods/search?${q}`, withTimeout(signal, 20_000)), signal)
-  const match = (data.foods ?? []).find((f) => sameBarcode(f.gtinUpc, code))
-  return match ? fromUsda(match) : null
+  const match = newestFirst((data.foods ?? []).filter((f) => sameBarcode(f.gtinUpc, code)))[0]
+  if (!match) return null
+  try {
+    const details = await retry(
+      () => getJson<UsdaFood>(`https://api.nal.usda.gov/fdc/v1/food/${match.fdcId}?api_key=${encodeURIComponent(USDA_KEY)}`, withTimeout(signal, 20_000)),
+      signal,
+      2,
+    )
+    const label = fromUsdaLabel({ ...match, ...details })
+    if (label) return label
+  } catch (err) {
+    if (signal.aborted) throw err
+  }
+  return fromUsda(match)
 }
 
 const OFF_FIELDS = 'code,product_name,product_name_en,brands,serving_size,serving_quantity,nutriments'

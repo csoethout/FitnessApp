@@ -233,6 +233,11 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         (`src/lib/barcode.ts`). Lookup (`lookupBarcode`): your foods → USDA branded (exact gtinUpc match) → Open Food
         Facts product API; quiet retries. Not found → Label tab with the barcode saved on the food, so the next scan
         finds it locally. Type-the-number fallback with check-digit validation. E2E with a fake camera (.y4m)
+  - [x] Owner bug (Jones chicken sausage numbers ×0.6): barcode USDA lookup now takes the NEWEST matching record and
+        its label panel (`/food/{id}` labelNutrients, per serving as printed; `fromUsdaLabel`), falling back to
+        per-100 g; OFF prefers `_serving` values. "Numbers don't match the package? Fix them" on every food portion
+        sheet → label form prefilled; saved copies are corrected in place (`correctFood`) incl. log entries that
+        still carry the old numbers; unsaved results become your own food with the barcode
   - [x] 4.5 Saved meals / recipes (`src/data/meals.ts`, maths in `src/lib/meals.ts`): a meal = foods + amounts;
         "Servings it makes" > 1 = recipe (1 serving = batch ÷ N). Logged as ONE entry (name = meal, saved_meal_id,
         per-serving snapshot incl. optional nutrients); excluded from Recent foods (listed under Saved meals instead).

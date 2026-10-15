@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { amountLabel, matchesQuery, fromOff, fromUsda, mergeResults, servingLabel, tidyName } from './foodSearch'
+import { amountLabel, matchesQuery, fromOff, fromUsdaLabel, newestFirst, fromUsda, mergeResults, servingLabel, tidyName } from './foodSearch'
 
 const usdaGeneric = {
   fdcId: 171477,
@@ -52,6 +52,29 @@ describe('USDA', () => {
   })
 })
 
+describe('USDA label panel (barcode lookups)', () => {
+  const details = {
+    fdcId: 1, description: 'FULLY COOKED CHICKEN SAUSAGE', dataType: 'Branded', brandOwner: 'Jones Dairy Farm', gtinUpc: '033900075314',
+    servingSize: 45, servingSizeUnit: 'g', householdServingFullText: '2 links',
+    labelNutrients: { calories: { value: 90 }, protein: { value: 10 }, fat: { value: 5 }, carbohydrates: { value: 0 }, sodium: { value: 390 }, saturatedFat: { value: 1.5 } },
+  }
+  it('uses the printed per-serving numbers', () => {
+    expect(fromUsdaLabel(details)).toMatchObject({
+      name: 'Fully Cooked Chicken Sausage', brand: 'Jones Dairy Farm', serving_unit: '2 links (45 g)', serving_grams: 45,
+      kcal: 90, protein_g: 10, fat_g: 5, carbs_g: 0, sodium_mg: 390, sat_fat_g: 1.5, fiber_g: null,
+    })
+  })
+  it('handles drinks in ml and missing labels', () => {
+    expect(fromUsdaLabel({ ...details, servingSize: 240, servingSizeUnit: 'MLT', householdServingFullText: '1 cup' })).toMatchObject({ serving_unit: '1 cup (240 ml)', serving_grams: null })
+    expect(fromUsdaLabel({ ...details, labelNutrients: undefined })).toBeNull()
+  })
+  it('puts the newest record first', () => {
+    const old = { ...details, fdcId: 2, publishedDate: '2019-04-01' }
+    const recent = { ...details, fdcId: 3, publishedDate: '2019-04-01', modifiedDate: '2023-08-10' }
+    expect(newestFirst([old, recent]).map((f) => f.fdcId)).toEqual([3, 2])
+  })
+})
+
 describe('Open Food Facts', () => {
   it('uses the serving quantity and converts sodium/cholesterol from g to mg', () => {
     const f = fromOff({
@@ -60,6 +83,13 @@ describe('Open Food Facts', () => {
     })!
     expect(f).toMatchObject({ source: 'off', barcode: '0041498123456', brand: 'Jack Link’s', serving_unit: '1 oz (28 g)', serving_grams: 28 })
     expect(f).toMatchObject({ kcal: 80, protein_g: 13, carbs_g: 6, fat_g: 1, sodium_mg: 579.6, cholesterol_mg: 19.9 })
+  })
+  it('prefers per-serving numbers when present', () => {
+    const f = fromOff({
+      code: '033900075314', product_name: 'Chicken sausage', serving_quantity: 45, serving_size: '2 links (45 g)',
+      nutriments: { 'energy-kcal_100g': 120, proteins_100g: 13, fat_100g: 7, 'energy-kcal_serving': 90, proteins_serving: 10, fat_serving: 5, carbohydrates_serving: 0, sodium_serving: 0.39 },
+    })!
+    expect(f).toMatchObject({ kcal: 90, protein_g: 10, fat_g: 5, carbs_g: 0, sodium_mg: 390 })
   })
   it('falls back to kJ and to per 100 g', () => {
     const f = fromOff({ code: '1', product_name: 'Rice', nutriments: { energy_100g: 1500, proteins_100g: 7 } })!

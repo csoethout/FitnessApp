@@ -3,7 +3,7 @@ import { ScanBarcode, Search, X } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useData } from '@/data/DataProvider'
-import { createCustomFood, logFood, logQuickAdd, lookupBarcode, MEAL_SLOTS, recentFoods, saveFoundFood, type RecentItem } from '@/data/food'
+import { correctFood, createCustomFood, logFood, logQuickAdd, lookupBarcode, MEAL_SLOTS, recentFoods, saveFoundFood, type RecentItem } from '@/data/food'
 import { logSavedMeal, useSavedMeals, type MealView } from '@/data/meals'
 import { searchUsda, usingDemoKey } from '@/data/foodApi'
 import { matchesQuery, servingLabel, type FoundFood } from '@/lib/foodSearch'
@@ -16,6 +16,9 @@ import { NumberInput } from './NumberInput'
 import { Stepper } from './Stepper'
 
 type Tab = 'recent' | 'search' | 'label' | 'quick'
+
+/** Pre-fill for the label form when fixing a food's numbers. `food` = your saved copy to correct in place. */
+type LabelInit = { from: FoundFood | Food; food: Food | null }
 type Scan = { step: 'camera' } | { step: 'looking' | 'notfound' | 'offline'; code: string }
 
 // The scanner and its ~1 MB reader load only when you tap Scan.
@@ -37,6 +40,7 @@ export function AddFoodSheet(props: { date: string; slot?: MealSlot; onClose: ()
   const [picked, setPicked] = useState<Portion | null>(null)
   const [scan, setScan] = useState<Scan | null>(null)
   const [labelBarcode, setLabelBarcode] = useState<string | null>(null)
+  const [labelInit, setLabelInit] = useState<LabelInit | null>(null)
   const scanCtrl = useRef<AbortController | null>(null)
   useEffect(() => () => scanCtrl.current?.abort(), [])
   const { store } = useData()
@@ -62,6 +66,7 @@ export function AddFoodSheet(props: { date: string; slot?: MealSlot; onClose: ()
   function pickRecent(r: RecentItem) {
     setPicked({
       title: r.name, kcal: r.kcal, protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g, food: r.food, startServings: r.lastServings || 1,
+      fix: r.food ? { from: r.food, food: r.food } : undefined,
       add: async (servings) => {
         if (r.food) await addFood(r.food, servings)
         else await logQuickAdd(store, date, slot, { name: r.name, kcal: r.kcal * servings, protein_g: r.protein_g * servings, carbs_g: r.carbs_g * servings, fat_g: r.fat_g * servings })
@@ -72,6 +77,7 @@ export function AddFoodSheet(props: { date: string; slot?: MealSlot; onClose: ()
   function pickFound(f: FoundFood) {
     setPicked({
       title: f.brand ? `${f.name} (${f.brand})` : f.name, kcal: f.kcal, protein_g: f.protein_g, carbs_g: f.carbs_g, fat_g: f.fat_g, food: f, startServings: 1,
+      fix: { from: f, food: null },
       add: async (servings) => addFood(await saveFoundFood(store, f), servings),
     })
   }
@@ -79,7 +85,7 @@ export function AddFoodSheet(props: { date: string; slot?: MealSlot; onClose: ()
   function pickMine(food: Food) {
     setPicked({
       title: food.brand ? `${food.name} (${food.brand})` : food.name, kcal: food.kcal, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g,
-      food, startServings: 1, add: (servings) => addFood(food, servings),
+      food, startServings: 1, add: (servings) => addFood(food, servings), fix: { from: food, food },
     })
   }
 
@@ -99,7 +105,15 @@ export function AddFoodSheet(props: { date: string; slot?: MealSlot; onClose: ()
     }
   }
 
+  function fixNumbers(init: LabelInit) {
+    setPicked(null)
+    setLabelInit(init)
+    setLabelBarcode(init.from.barcode)
+    setTab('label')
+  }
+
   function typeFromLabel(code: string) {
+    setLabelInit(null)
     setLabelBarcode(code)
     setTab('label')
     setScan(null)
@@ -147,8 +161,9 @@ export function AddFoodSheet(props: { date: string; slot?: MealSlot; onClose: ()
         {tab === 'search' && <SearchTab date={date} foodsOnly={!!pickOnly} onPick={pickFound} onPickMine={pickRecent} onLabel={() => setTab('label')} />}
         {tab === 'label' && (
           <LabelTab
-            key={labelBarcode ?? ''}
+            key={`${labelBarcode ?? ''}|${labelInit ? 'fix' : ''}`}
             barcode={labelBarcode}
+            init={labelInit}
             onSaved={async (food, servings) => {
               await addFood(food, servings)
               onClose()
@@ -157,7 +172,7 @@ export function AddFoodSheet(props: { date: string; slot?: MealSlot; onClose: ()
         )}
         {tab === 'quick' && <QuickTab date={date} slot={slot} onDone={onClose} />}
       </div>
-      {picked && <PortionSheet portion={picked} onCancel={() => setPicked(null)} onDone={onClose} />}
+      {picked && <PortionSheet portion={picked} onCancel={() => setPicked(null)} onDone={onClose} onFix={fixNumbers} />}
       {scan?.step === 'camera' && (
         <Suspense fallback={<div className="fixed inset-0 z-[60] bg-black" />}>
           <BarcodeScanner onCode={(code) => void lookup(code)} onClose={() => setScan(null)} />
@@ -290,12 +305,13 @@ type Portion = {
   fat_g: number
   food: { serving_amount: number; serving_unit: string; serving_grams: number | null } | null // null = quick add / saved meal
   subtitle?: string // saved meals: portions picked with a stepper
+  fix?: LabelInit // "numbers don't match the package?"
   startServings: number
   add: (servings: number) => Promise<unknown>
 }
 
 /** Pick how much (servings, or grams when the serving's weight is known), see the totals, add. */
-function PortionSheet({ portion: p, onCancel, onDone }: { portion: Portion; onCancel: () => void; onDone: () => void }) {
+function PortionSheet({ portion: p, onCancel, onDone, onFix }: { portion: Portion; onCancel: () => void; onDone: () => void; onFix: (i: LabelInit) => void }) {
   const [servings, setServings] = useState(p.startServings)
   const [busy, setBusy] = useState(false)
   const t = (v: number) => Math.round(v * servings)
@@ -327,6 +343,11 @@ function PortionSheet({ portion: p, onCancel, onDone }: { portion: Portion; onCa
         <button type="button" disabled={busy} onClick={() => void add()} className="mt-4 min-h-14 w-full rounded-xl bg-accent text-lg font-semibold text-accent-ink disabled:opacity-40">
           Add
         </button>
+        {p.fix && (
+          <button type="button" onClick={() => onFix(p.fix!)} className="mt-2 min-h-12 w-full text-sm text-muted underline decoration-dotted underline-offset-4">
+            Numbers don’t match the package? Fix them
+          </button>
+        )}
       </div>
     </div>
   )
@@ -468,32 +489,49 @@ function SearchTab(props: { date: string; foodsOnly: boolean; onPick: (f: FoundF
 }
 
 /** Type in a nutrition label. Saves it as your own food (shows in Recent next time), then adds it. */
-function LabelTab({ barcode, onSaved }: { barcode: string | null; onSaved: (food: Food, servings: number) => Promise<void> }) {
+function LabelTab({ barcode, init, onSaved }: { barcode: string | null; init: LabelInit | null; onSaved: (food: Food, servings: number) => Promise<void> }) {
   const { store } = useData()
-  const [name, setName] = useState('')
-  const [brand, setBrand] = useState('')
-  const [servingAmount, setServingAmount] = useState<number | null>(1)
-  const [servingUnit, setServingUnit] = useState('serving')
-  const [grams, setGrams] = useState<number | null>(null)
-  const [macros, setMacros] = useState<MacroValues>(EMPTY_MACROS)
-  const [extras, setExtras] = useState<Extras>({})
+  const f = init?.from
+  const [name, setName] = useState(f?.name ?? '')
+  const [brand, setBrand] = useState(f?.brand ?? '')
+  const [servingAmount, setServingAmount] = useState<number | null>(f?.serving_amount ?? 1)
+  const [servingUnit, setServingUnit] = useState(f?.serving_unit ?? 'serving')
+  const [grams, setGrams] = useState<number | null>(f?.serving_grams ?? null)
+  const [macros, setMacros] = useState<MacroValues>(
+    f ? { kcal: f.kcal, kcalTyped: true, protein: f.protein_g, carbs: f.carbs_g, fat: f.fat_g } : EMPTY_MACROS,
+  )
+  const [extras, setExtras] = useState<Extras>(
+    f ? Object.fromEntries(EXTRA_NUTRIENTS.map((n) => [n.key, (f as unknown as Record<string, number | null>)[foodCol(n.key)] ?? null])) : {},
+  )
   const [servings, setServings] = useState(1)
   const ok = name.trim() !== '' && macrosValid(macros) && (servingAmount ?? 0) > 0
 
   async function save() {
-    const extraCols = Object.fromEntries(EXTRA_NUTRIENTS.map((n) => [foodCol(n.key), extras[n.key] ?? null]))
-    const food: Food = await createCustomFood(store, {
+    const extraCols = Object.fromEntries(EXTRA_NUTRIENTS.map((n) => [foodCol(n.key), extras[n.key] ?? null])) as Pick<
+      Food,
+      'fiber_g' | 'sugar_g' | 'sat_fat_g' | 'trans_fat_g' | 'cholesterol_mg' | 'sodium_mg'
+    >
+    const fields = {
       name: name.trim(), brand: brand.trim() || null, serving_amount: servingAmount ?? 1, serving_unit: servingUnit.trim() || 'serving',
       serving_grams: grams, kcal: effectiveKcal(macros) ?? 0, protein_g: macros.protein ?? 0, carbs_g: macros.carbs ?? 0, fat_g: macros.fat ?? 0,
-      barcode, ...extraCols,
-    })
+      ...extraCols,
+    }
+    // Fixing your saved copy corrects it in place (and entries logged with the wrong numbers); otherwise a new food.
+    const food: Food = init?.food ? await correctFood(store, init.food, fields) : await createCustomFood(store, { ...fields, barcode })
     await onSaved(food, servings)
   }
 
   const text = 'h-12 w-full rounded-xl border border-border bg-surface-2 px-3 text-base outline-none focus:border-accent'
   return (
     <div className="space-y-3">
-      {barcode && <p className="rounded-xl bg-surface p-3 text-sm text-muted">Barcode {barcode} is saved with this food, so scanning it next time finds it.</p>}
+      {init ? (
+        <p className="rounded-xl bg-surface p-3 text-sm text-muted">
+          Change anything that doesn’t match the package. Your copy is corrected{init.food ? ', including entries logged with the wrong numbers,' : ''} and
+          {barcode ? ' scanning it' : ' searching for it'} next time uses your numbers.
+        </p>
+      ) : (
+        barcode && <p className="rounded-xl bg-surface p-3 text-sm text-muted">Barcode {barcode} is saved with this food, so scanning it next time finds it.</p>
+      )}
       <input className={text} placeholder="Food name *" value={name} onChange={(e) => setName(e.target.value)} aria-label="Food name" />
       <input className={text} placeholder="Brand (optional)" value={brand} onChange={(e) => setBrand(e.target.value)} aria-label="Brand" />
       <p className="pt-2 text-sm font-semibold">Per serving, as on the label</p>
@@ -503,7 +541,7 @@ function LabelTab({ barcode, onSaved }: { barcode: string | null; onSaved: (food
           type="text"
           inputMode="decimal"
           aria-label="Serving amount"
-          defaultValue="1"
+          defaultValue={String(f?.serving_amount ?? 1)}
           onChange={(e) => setServingAmount(Number(e.target.value.replace(',', '.')) || null)}
           className="h-12 w-16 rounded-xl border border-border bg-surface-2 px-2 text-right text-base outline-none focus:border-accent"
         />
@@ -517,7 +555,7 @@ function LabelTab({ barcode, onSaved }: { barcode: string | null; onSaved: (food
         <Stepper label="servings" value={servings} step={0.25} min={0.25} max={20} format={(v) => String(v)} onChange={setServings} onTypeValue={(v) => setServings(Math.max(0.25, v))} />
       </div>
       <button type="button" disabled={!ok} onClick={() => void save()} className="min-h-14 w-full rounded-xl bg-accent text-lg font-semibold text-accent-ink disabled:opacity-40">
-        Save food &amp; add
+        {init?.food ? 'Save fix & add' : 'Save food & add'}
       </button>
       <p className="text-center text-xs text-muted">Saved to your foods, so next time it's one tap under Recent.</p>
     </div>

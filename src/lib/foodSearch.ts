@@ -63,6 +63,10 @@ export type UsdaFood = {
   servingSizeUnit?: string
   householdServingFullText?: string
   foodNutrients?: UsdaNutrient[]
+  publishedDate?: string // search results: "2021-03-11"; details: "3/11/2021"
+  modifiedDate?: string
+  /** Only in the details endpoint (/food/{id}) for branded foods: the panel as printed, per serving. */
+  labelNutrients?: Partial<Record<'calories' | 'protein' | 'carbohydrates' | 'fat' | 'fiber' | 'sugars' | 'saturatedFat' | 'transFat' | 'cholesterol' | 'sodium', { value?: number }>>
 }
 
 // nutrientId, with the older nutrientNumber as a fallback.
@@ -112,6 +116,36 @@ export function fromUsda(f: UsdaFood): FoundFood | null {
   return { ...base, ...scale(per100, 100), serving_amount: 100, serving_unit: 'g', serving_grams: 100 }
 }
 
+/** Newest record first: USDA keeps old versions of a product (older labels, different serving sizes). */
+export function newestFirst(foods: UsdaFood[]): UsdaFood[] {
+  const t = (f: UsdaFood) => Date.parse(f.modifiedDate || f.publishedDate || '') || 0
+  return [...foods].sort((a, b) => t(b) - t(a))
+}
+
+/**
+ * A branded USDA food from the details endpoint, using its label panel (per serving, exactly as printed) rather than
+ * per-100 g values scaled back, which can drift or use a different serving. Null when there's no usable label.
+ */
+export function fromUsdaLabel(f: UsdaFood): FoundFood | null {
+  const l = f.labelNutrients
+  const v = (k: keyof NonNullable<UsdaFood['labelNutrients']>) => num(l?.[k]?.value)
+  const kcal = v('calories')
+  const size = num(f.servingSize)
+  if (!l || kcal === null || !size) return null
+  const unit = (f.servingSizeUnit ?? '').toLowerCase()
+  const isGrams = unit === 'g' || unit === 'grm'
+  const sizeText = `${r1(size)} ${isGrams ? 'g' : unit === 'mlt' ? 'ml' : unit}`
+  const label = f.householdServingFullText?.trim()
+  return {
+    source: 'usda', source_id: String(f.fdcId), barcode: f.gtinUpc?.trim() || null, name: tidyName(f.description),
+    brand: tidyName(f.brandName || f.brandOwner || '') || null, generic: false,
+    serving_amount: 1, serving_unit: (label ? `${label} (${sizeText})` : sizeText).slice(0, 60), serving_grams: isGrams ? size : null,
+    kcal: Math.round(kcal), protein_g: r1(v('protein') ?? 0), carbs_g: r1(v('carbohydrates') ?? 0), fat_g: r1(v('fat') ?? 0),
+    fiber_g: v('fiber'), sugar_g: v('sugars'), sat_fat_g: v('saturatedFat'), trans_fat_g: v('transFat'),
+    cholesterol_mg: v('cholesterol'), sodium_mg: v('sodium'),
+  }
+}
+
 // ---------- Open Food Facts ----------
 
 // The newer search service may return names per language ({ en, main, … }) and brands as a list.
@@ -156,7 +190,21 @@ export function fromOff(p: OffProduct): FoundFood | null {
   const grams = num(p.serving_quantity)
   if (grams && grams > 0) {
     const label = p.serving_size?.trim()
-    return { ...base, ...scale(per100, grams), serving_amount: 1, serving_unit: (label || `${r1(grams)} g`).slice(0, 60), serving_grams: grams }
+    const serving = { serving_amount: 1, serving_unit: (label || `${r1(grams)} g`).slice(0, 60), serving_grams: grams }
+    // Prefer the per-serving numbers when OFF has them (often typed straight from the label).
+    const s = (k: string) => num(n[`${k}_serving`])
+    const kcalServing = s('energy-kcal')
+    if (kcalServing !== null && s('proteins') !== null) {
+      const sm = (k: string) => {
+        const v = s(k)
+        return v === null ? null : r1(v * 1000)
+      }
+      return {
+        ...base, ...serving, kcal: Math.round(kcalServing), protein_g: r1(s('proteins') ?? 0), carbs_g: r1(s('carbohydrates') ?? 0), fat_g: r1(s('fat') ?? 0),
+        fiber_g: s('fiber'), sugar_g: s('sugars'), sat_fat_g: s('saturated-fat'), trans_fat_g: s('trans-fat'), cholesterol_mg: sm('cholesterol'), sodium_mg: sm('sodium'),
+      }
+    }
+    return { ...base, ...scale(per100, grams), ...serving }
   }
   return { ...base, ...scale(per100, 100), serving_amount: 100, serving_unit: 'g', serving_grams: 100 }
 }
