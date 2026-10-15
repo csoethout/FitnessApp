@@ -123,7 +123,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   sets rest 60 s; otherwise the plan's rest (3/2/1 min). No timer after the workout's last set.
 - Beep (`src/lib/beep.ts`): iOS needs audio *played* during a tap → any pointerdown in the logger plays a silent
   1-sample buffer. The beep is played when the timer hits zero (not pre-scheduled; iOS dropped that) and only if
-  it ended <10 s ago. Web Audio mixes with music and obeys the silent switch. More → "Test rest sound".
+  it ended <10 s ago. Web Audio mixes with music and obeys the silent switch. Confirmed working on the owner's iPhone.
 - Stats (`src/lib/stats.ts`): e1RM = Epley, 1–10 reps, completed `working` sets only (warm-up and `limited`
   excluded). Volume = weight × reps of completed non-warm-up sets (limited included). PRs (e1RM, heaviest set) only
   vs workouts that started earlier; none the first time an exercise is logged. All computed, never stored.
@@ -171,6 +171,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         warm-up offer on first compound (bar×10, 50%×5, 70%×3, 85%×1; ≥10 lb jumps)
   - [x] 2.7 Finish → summary (time, sets, volume, PRs vs earlier sessions, est. 1RM per exercise, edit/delete),
         History list (Train → Recent workouts / See all, `/history`, `/history/:id`)
+  - [x] Owner: rest beep confirmed on iPhone
   - [ ] Owner: test 2.7 on iPhone → Phase 2 done
 - [ ] **Phase 3: progress views and charts**
 - [ ] **Phase 4: body weight (+ body fat %, muscle mass) and food/macro tracking**

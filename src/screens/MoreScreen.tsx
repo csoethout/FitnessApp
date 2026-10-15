@@ -7,7 +7,6 @@ import { Placeholder } from '@/components/Placeholder'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { SyncStatusCard } from '@/components/SyncStatusCard'
 import { useData } from '@/data/DataProvider'
-import { audioState, beep, unlockAudio } from '@/lib/beep'
 import { useMainGym } from '@/data/queries'
 import { supabase } from '@/lib/supabase'
 
@@ -15,7 +14,6 @@ export function MoreScreen() {
   const { session } = useAuth()
   const { db, sync } = useData()
   const [signingOut, setSigningOut] = useState(false)
-  const [soundInfo, setSoundInfo] = useState<string | null>(null)
   const confirm = useConfirm()
   const gymInfo = useMainGym()
 
@@ -54,21 +52,6 @@ export function MoreScreen() {
           </span>
           <ChevronRight size={20} className="text-muted" aria-hidden />
         </Link>
-        <section className="rounded-2xl border border-border bg-surface p-4">
-          <p className="font-medium">Rest timer sound</p>
-          <p className="text-sm text-muted">Plays the end-of-rest beep now. The silent switch on the side of the iPhone mutes it.</p>
-          <button
-            type="button"
-            onClick={() => {
-              unlockAudio()
-              void beep().then(() => setSoundInfo(`Played (audio: ${audioState()})`))
-            }}
-            className="mt-3 min-h-12 w-full rounded-xl border border-border bg-surface-2"
-          >
-            Test rest sound
-          </button>
-          {soundInfo && <p className="mt-2 text-xs text-muted">{soundInfo}</p>}
-        </section>
         <Placeholder phase={5}>Profile, timer and effort settings</Placeholder>
         <Placeholder phase={6}>Export all data as CSV</Placeholder>
         <button

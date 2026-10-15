@@ -61,8 +61,3 @@ export async function beep() {
     osc.stop(t + 0.2)
   }
 }
-
-/** For the "Test rest sound" button: state of the audio system, for troubleshooting. */
-export function audioState(): string {
-  return ctx ? ctx.state : 'not started'
-}
