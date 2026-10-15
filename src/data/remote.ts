@@ -24,6 +24,16 @@ export function isPermanentError(error: RemoteError): boolean {
 export function supabaseRemote(client: SupabaseClient): Remote {
   return {
     async upsert(table, rows) {
+      if (table === 'profiles') {
+        // The server creates the profile row at sign-up and only allows updating it (no insert, no deleted_at).
+        for (const row of rows) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { id, created_at, deleted_at, ...changes } = row
+          const { error } = await client.from('profiles').update(changes).eq('id', id as string)
+          if (error) return { error }
+        }
+        return { error: null }
+      }
       const { error } = await client.from(table).upsert(rows, { onConflict: 'id' })
       return { error }
     },

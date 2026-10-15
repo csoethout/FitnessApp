@@ -51,5 +51,10 @@ export function openLocalDb(userId: string): LocalDb {
     food_log_entries: 'id, logged_on, food_id',
     nutrition_targets: 'id, effective_from',
   })
+  // v4: profile (planner inputs) and goals.
+  db.version(4).stores({
+    profiles: 'id',
+    goals: 'id',
+  })
   return db
 }

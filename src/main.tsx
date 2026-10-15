@@ -10,6 +10,7 @@ import { DayEditorScreen } from '@/screens/DayEditorScreen'
 import { FoodScreen } from '@/screens/FoodScreen'
 import { GymScreen } from '@/screens/GymScreen'
 import { HistoryScreen } from '@/screens/HistoryScreen'
+import { NutritionPlanScreen } from '@/screens/NutritionPlanScreen'
 import { MoreScreen } from '@/screens/MoreScreen'
 import { ProgressScreen } from '@/screens/ProgressScreen'
 import { SignInScreen } from '@/screens/SignInScreen'
@@ -46,6 +47,7 @@ const router = createBrowserRouter([
               { path: '/history', element: <HistoryScreen /> },
               { path: '/history/:workoutId', element: <SummaryScreen /> },
           { path: '/food', element: <FoodScreen /> },
+              { path: '/food/plan', element: <NutritionPlanScreen /> },
           { path: '/progress', element: <ProgressScreen /> },
               {
                 path: '/progress/exercise/:exerciseId',

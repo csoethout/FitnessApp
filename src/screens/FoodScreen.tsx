@@ -1,10 +1,9 @@
 import { ChevronLeft, ChevronRight, Copy, Plus, Target } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { AddFoodSheet } from '@/components/AddFoodSheet'
 import { EntrySheet } from '@/components/EntrySheet'
 import { MacroBars } from '@/components/MacroBars'
-import { TargetsSheet } from '@/components/TargetsSheet'
 import { useData } from '@/data/DataProvider'
 import { copyEntries, MEAL_SLOTS } from '@/data/food'
 import { useDayLog, useTargetOn } from '@/data/foodHooks'
@@ -27,7 +26,6 @@ export function FoodScreen() {
   const target = useTargetOn(date)
   const [adding, setAdding] = useState<MealSlot | null>(null)
   const [editing, setEditing] = useState<FoodLogEntry | null>(null)
-  const [targetsOpen, setTargetsOpen] = useState(false)
 
   const totals = useMemo(() => sumMacros((entries ?? []).map(entryMacros)), [entries])
   if (entries === undefined || target === undefined) return null
@@ -51,16 +49,16 @@ export function FoodScreen() {
         >
           <ChevronRight />
         </button>
-        <button type="button" aria-label="Daily targets" onClick={() => setTargetsOpen(true)} className="grid size-12 place-items-center text-muted">
+        <Link to="/food/plan" aria-label="Your nutrition plan" className="grid size-12 place-items-center text-muted">
           <Target size={22} />
-        </button>
+        </Link>
       </header>
 
       {target === null ? (
-        <button type="button" onClick={() => setTargetsOpen(true)} className="mb-3 w-full rounded-2xl border border-accent bg-accent/10 p-4 text-left">
-          <p className="font-semibold">Set your daily targets</p>
-          <p className="text-sm text-muted">Starts at about 2,700 kcal and 200 g protein. Adjust any time.</p>
-        </button>
+        <Link to="/food/plan" className="mb-3 block w-full rounded-2xl border border-accent bg-accent/10 p-4">
+          <p className="font-semibold">Set up your nutrition plan</p>
+          <p className="text-sm text-muted">Calories and protein calculated from your height, weight and goal.</p>
+        </Link>
       ) : null}
       <MacroBars eaten={totals} target={target} />
 
@@ -125,7 +123,6 @@ export function FoodScreen() {
 
       {adding && <AddFoodSheet date={date} slot={adding} onClose={() => setAdding(null)} />}
       {editing && <EntrySheet entry={editing} onClose={() => setEditing(null)} />}
-      {targetsOpen && <TargetsSheet today={today} current={target} onClose={() => setTargetsOpen(false)} />}
     </>
   )
 }

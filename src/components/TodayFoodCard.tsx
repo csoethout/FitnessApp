@@ -20,7 +20,7 @@ export function TodayFoodCard() {
           <Left label="Protein left" value={target.protein_g - eaten.protein_g} unit="g" />
         </div>
       ) : (
-        <p className="mt-1">Set your daily targets on the Food tab.</p>
+        <p className="mt-1">Set up your nutrition plan on the Food tab.</p>
       )}
     </Link>
   )

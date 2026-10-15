@@ -107,6 +107,38 @@ export type BodyMeasurement = Owned & {
   note: string | null
 }
 
+/** One per account, keyed by the auth user id (created by the server on sign-up). No soft delete on the server. */
+export type Profile = Timestamps & {
+  id: string
+  display_name: string | null
+  sex: 'male' | 'female' | null
+  birth_date: string | null // YYYY-MM-DD
+  height_cm: number | null
+  activity_level: 'sedentary' | 'light' | 'moderate' | 'very' | 'extra' | null
+  unit_system: 'imperial' | 'metric'
+  timezone: string | null
+  week_start_day: number
+  session_minutes_min: number | null
+  session_minutes_max: number | null
+  preferred_time: 'morning' | 'midday' | 'evening' | 'flexible' | null
+  settings: ProfileSettings
+}
+
+export type ProfileSettings = {
+  /** Your nudges on top of the calculated nutrition plan (kept when the plan recalculates). */
+  nutritionAdjust?: { kcal: number; protein_g: number; fat_g: number }
+}
+
+export type Goal = Owned & {
+  goal_type: 'recomp' | 'cut' | 'bulk' | 'maintain' | 'strength'
+  start_date: string
+  end_date: string | null
+  start_weight_kg: number | null
+  target_weight_kg: number | null
+  target_rate_pct_week: number | null
+  status: 'active' | 'completed' | 'abandoned'
+}
+
 export type Food = Timestamps & {
   id: string
   owner_id: string | null // null = shared cache (server-written); otherwise the user's own food
@@ -156,6 +188,8 @@ export type NutritionTarget = Owned & {
 
 /** Tables the app reads and writes locally, mapped to their row types. */
 export type Tables = {
+  profiles: Profile
+  goals: Goal
   exercises: Exercise
   equipment_profiles: EquipmentProfile
   exercise_unavailable: ExerciseUnavailable
@@ -178,6 +212,8 @@ export type TableName = keyof Tables
 
 /** Sync order: parents before children, so foreign keys exist when children are pushed. */
 export const SYNC_ORDER: TableName[] = [
+  'profiles',
+  'goals',
   'exercises',
   'equipment_profiles',
   'exercise_unavailable',
@@ -196,8 +232,13 @@ export const SYNC_ORDER: TableName[] = [
   'nutrition_targets',
 ]
 
-/** Column that identifies the owner. The exercises table uses owner_id (null for the shared catalog). */
-export const OWNER_COLUMN: Record<TableName, 'user_id' | 'owner_id'> = {
+/**
+ * Column that identifies the owner. exercises/foods use owner_id (null for shared rows);
+ * profiles are keyed by the user id itself.
+ */
+export const OWNER_COLUMN: Record<TableName, 'user_id' | 'owner_id' | 'id'> = {
+  profiles: 'id',
+  goals: 'user_id',
   exercises: 'owner_id',
   equipment_profiles: 'user_id',
   exercise_unavailable: 'user_id',

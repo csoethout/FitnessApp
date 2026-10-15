@@ -1,5 +1,6 @@
 import { ChartLine, Dumbbell, Ellipsis, House, Utensils, type LucideIcon } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router'
+import { TargetKeeper } from './TargetKeeper'
 
 const tabs: { to: string; label: string; icon: LucideIcon }[] = [
   { to: '/', label: 'Today', icon: House },
@@ -16,6 +17,7 @@ const tabs: { to: string; label: string; icon: LucideIcon }[] = [
 export function AppLayout() {
   return (
     <div className="flex h-full flex-col">
+      <TargetKeeper />
       <main className="flex-1 overflow-y-auto px-4 pb-6 pt-[max(1rem,env(safe-area-inset-top))]">
         <Outlet />
       </main>

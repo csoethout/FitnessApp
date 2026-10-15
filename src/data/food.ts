@@ -53,11 +53,17 @@ export async function copyEntries(store: LocalStore, from: string, to: string, s
 }
 
 /** Set the daily target from `date` onwards. One row per start date (server rule), so re-saving a day updates it. */
-export async function setTarget(store: LocalStore, date: string, m: { kcal: number; protein_g: number; carbs_g: number; fat_g: number }) {
+export async function setTarget(
+  store: LocalStore,
+  date: string,
+  m: { kcal: number; protein_g: number; carbs_g: number; fat_g: number },
+  reason: 'initial' | 'biweekly_adjust' | 'manual' = 'manual',
+  goalId: string | null = null,
+) {
   const existing = await store.db.nutrition_targets.where('effective_from').equals(date).first()
   const values = { kcal: Math.round(m.kcal), protein_g: Math.round(m.protein_g), carbs_g: Math.round(m.carbs_g), fat_g: Math.round(m.fat_g) }
-  if (existing) return store.update('nutrition_targets', existing.id, { ...values, reason: 'manual', deleted_at: null })
-  return store.insert('nutrition_targets', { ...values, effective_from: date, goal_id: null, reason: 'manual' })
+  if (existing) return store.update('nutrition_targets', existing.id, { ...values, reason, goal_id: goalId, deleted_at: null })
+  return store.insert('nutrition_targets', { ...values, effective_from: date, goal_id: goalId, reason })
 }
 
 export type RecentItem = PerServing & { key: string; food: Food | null; lastServings: number; count: number; last: string }

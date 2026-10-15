@@ -138,9 +138,15 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 - Food search: the app calls USDA FoodData Central and Open Food Facts directly. The USDA key is a free,
   read-only public-data key and is visible in the frontend bundle (accepted risk: only rate-limit abuse; rotate if
   needed). Logged foods are saved as the user's own `foods` rows (no shared server cache).
-- Targets (Phase 4, manual until the Phase 5 planner): user sets kcal, protein, fat; carbs = remainder.
-  Guardrails: ≥1500 kcal (owner is male; sex-specific floor with the Phase 5 profile), fat ≥40 g, protein+fat
-  calories ≤ total. `nutrition_targets` keeps history (one row per effective_from); a day uses the latest ≤ it.
+- Nutrition plan (`src/lib/planner/nutrition.ts`): BMR Mifflin-St Jeor; activity ×1.2/1.375/1.55/1.725/1.9; goal
+  recomp −15%, cut −20%, maintain 0, strength +5%, bulk +10% (rounded to 50 kcal); protein g/lb: recomp 0.95,
+  cut 1.0, maintain 0.8, strength/bulk 0.85 (rounded to 5, cap 300); fat ≥0.3 g/lb (bulk: 25% kcal); carbs = rest.
+  Weight = 7-day average of weigh-ins. User nudges are OFFSETS (profile.settings.nutritionAdjust) so they survive
+  recalculation. Guardrails on the total: ≥ max(sex floor 1500/1200, 75% of maintenance); fat ≥0.25 g/lb.
+  Today's `nutrition_targets` row is kept equal to the plan by `TargetKeeper`; past days keep their row.
+  Biweekly trend-based adjustment is still Phase 5.
+- Profiles sync: keyed by user id (OWNER_COLUMN 'id'); server allows UPDATE only (row created at sign-up), so
+  `supabaseRemote` updates instead of upserting and strips `deleted_at`. Goals: one active row, changed in place.
 - Allowed values are text + CHECK constraints, not Postgres enums (easier to extend).
 - Supabase "publishable"/anon key is safe in the frontend because RLS protects data. The service-role key is
   never in frontend code or the repo.
@@ -202,7 +208,11 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [ ] Owner: get USDA key → Cloudflare build var `VITE_USDA_API_KEY`
   - [x] 4.2 Food log: Food tab day view (‹ › days, ?d=), calorie/protein meters + carbs/fat, 4 meals, add sheet
         (Recent default · Nutrition label → own food · Quick add), edit/move/delete entry, copy yesterday (day or
-        meal), targets sheet (kcal/protein/fat, carbs = rest, guardrails), Today food card; Dexie v3 food tables
+        meal), Today food card; Dexie v3 food tables
+  - [x] 4.2b Calculated nutrition plan (owner request; calorie part of Phase 5 pulled forward): Food → ◎ →
+        `/food/plan`: details form pre-filled from owner profile, targets from Mifflin-St Jeor × activity × goal,
+        "How we got here", small −/+ nudges stored as offsets in profile.settings; TargetKeeper writes today's
+        `nutrition_targets` row whenever the plan changes; profiles + goals sync (Dexie v4)
   - [ ] 4.3 Food search (USDA + Open Food Facts)
   - [ ] 4.4 Barcode scanning
   - [ ] 4.5 Saved meals / recipes
@@ -211,7 +221,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**
 
 ## Backlog (not in MVP)
-- **Before sharing with anyone: remove Testing tools** (`src/components/TestingTools.tsx`, `src/data/sample.ts`)
+- **Before sharing with anyone: remove Testing tools** and OWNER_DEFAULTS in `NutritionPlanScreen.tsx`; (`src/components/TestingTools.tsx`, `src/data/sample.ts`)
 - Suggested workout times from availability blocks (e.g. busy 8am–6pm) + one-off commitments
 - Google Calendar sync (adds OAuth + privacy surface)
 - AI: free-text week check-in ("out of town Fri–Sun, hotel gym")
