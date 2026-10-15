@@ -26,15 +26,19 @@ function withTimeout(signal: AbortSignal, ms: number): AbortSignal {
 
 async function usdaSearch(query: string, dataType: string, pageSize: number, signal: AbortSignal): Promise<FoundFood[]> {
   const q = new URLSearchParams({ api_key: USDA_KEY, query, dataType, pageSize: String(pageSize) })
-  const data = await getJson<{ foods?: UsdaFood[] }>(`https://api.nal.usda.gov/fdc/v1/foods/search?${q}`, withTimeout(signal, 10_000))
+  const data = await getJson<{ foods?: UsdaFood[] }>(`https://api.nal.usda.gov/fdc/v1/foods/search?${q}`, withTimeout(signal, 20_000))
   return (data.foods ?? []).map(fromUsda).filter((f): f is FoundFood => f !== null)
 }
 
-/** USDA: whole foods (best for meat, eggs, rice…) and branded products, as two lists so whole foods aren't buried. */
+/**
+ * USDA: whole foods (best for meat, eggs, rice…) and branded products, as two lists so whole foods aren't buried.
+ * If one of the two fails (USDA is sometimes slow), the other's results are still shown.
+ */
 export async function searchUsda(query: string, signal: AbortSignal): Promise<FoundFood[]> {
-  const [generic, branded] = await Promise.all([
+  const [generic, branded] = await Promise.allSettled([
     usdaSearch(query, 'Foundation,SR Legacy,Survey (FNDDS)', 10, signal),
     usdaSearch(query, 'Branded', 15, signal),
   ])
-  return [...generic, ...branded]
+  if (generic.status === 'rejected' && branded.status === 'rejected') throw generic.reason
+  return [...(generic.status === 'fulfilled' ? generic.value : []), ...(branded.status === 'fulfilled' ? branded.value : [])]
 }

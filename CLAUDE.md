@@ -207,7 +207,9 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         `body_measurements` synced (Dexie v2); testing tools add/delete sample weigh-ins
   - [x] Owner: USDA key in Cloudflare build var `VITE_USDA_API_KEY` (confirmed working)
   - [x] Search as you type (owner request): your own foods match instantly (local, offline); USDA after a 500 ms
-        pause (≥3 letters; only with a real key, DEMO_KEY waits for the Search button); per-query cache
+        pause (≥3 letters; only with a real key, DEMO_KEY waits for the Search button); per-query cache.
+        No error messages (owner request): silent retries (1 s, 3 s), 20 s timeout, whole-food and brand halves
+        independent; only "You're offline" is shown
   - [x] 4.2 Food log: Food tab day view (‹ › days, ?d=), calorie/protein meters + carbs/fat, 4 meals, add sheet
         (Recent default · Nutrition label → own food · Quick add), edit/move/delete entry, copy yesterday (day or
         meal), Today food card; Dexie v3 food tables

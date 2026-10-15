@@ -177,7 +177,7 @@ function PortionSheet({ portion: p, onCancel, onDone }: { portion: Portion; onCa
   )
 }
 
-type SearchState = { status: 'idle' | 'loading' | 'done' | 'error'; query: string; items: FoundFood[]; error?: string }
+type SearchState = { status: 'idle' | 'loading' | 'done' | 'error'; query: string; items: FoundFood[]; offline?: boolean }
 const AUTO_DELAY_MS = 500
 
 /**
@@ -205,15 +205,21 @@ function SearchTab(props: { date: string; onPick: (f: FoundFood) => void; onPick
     const c = new AbortController()
     ctrl.current = c
     setRes((r) => ({ status: 'loading', query: text, items: r.items }))
-    searchUsda(text, c.signal).then(
-      (items) => {
-        cache.current.set(text.toLowerCase(), items)
-        if (!c.signal.aborted) setRes({ status: 'done', query: text, items })
-      },
-      (err: unknown) =>
-        !c.signal.aborted &&
-        setRes({ status: 'error', query: text, items: [], error: !navigator.onLine ? "you're offline" : err instanceof Error && err.message.startsWith('Too many') ? err.message : "couldn't connect, try again" }),
-    )
+    // USDA is sometimes slow or drops a request: retry quietly (after 1 s, then 3 s) instead of showing an error.
+    const attempt = (n: number): void => {
+      searchUsda(text, c.signal).then(
+        (items) => {
+          cache.current.set(text.toLowerCase(), items)
+          if (!c.signal.aborted) setRes({ status: 'done', query: text, items })
+        },
+        () => {
+          if (c.signal.aborted) return
+          if (n < 2 && navigator.onLine) setTimeout(() => !c.signal.aborted && attempt(n + 1), n === 0 ? 1000 : 3000)
+          else setRes({ status: 'error', query: text, items: [], offline: !navigator.onLine })
+        },
+      )
+    }
+    attempt(0)
   }
 
   // As you type: wait for a short pause, then search (each new letter cancels the wait).
@@ -277,7 +283,7 @@ function SearchTab(props: { date: string; onPick: (f: FoundFood) => void; onPick
           {usingDemoKey && <span className="mt-2 block text-amber-400">Using USDA's shared demo key: limited searches per hour.</span>}
         </p>
       )}
-      {res.status === 'error' && <p className="mt-3 text-sm text-amber-400">Search didn't work ({res.error}).</p>}
+      {res.status === 'error' && res.offline && <p className="mt-3 text-sm text-muted">You're offline. Your foods still work; USDA results need a connection.</p>}
       {results.length > 0 && <p className="mt-3 text-xs font-semibold text-muted uppercase">USDA</p>}
       <ul>
         {results.map((f) => (
