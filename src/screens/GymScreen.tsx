@@ -1,16 +1,20 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronLeft } from 'lucide-react'
-import { Link } from 'react-router'
+import { ChevronLeft, Trash2 } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router'
+import { useConfirm } from '@/components/ConfirmProvider'
 import { useData } from '@/data/DataProvider'
-import { useMainGym } from '@/data/queries'
+import { useGym } from '@/data/queries'
 import { ensureMainGym } from '@/data/setup'
 import { restoreAvailable } from '@/data/swap'
 import { ALL_EQUIPMENT } from '@/lib/swap'
 
-/** Edit what the gym has. Drives the exercise picker, Swap suggestions and (Phase 5) the planner. */
+/** Edit what a gym has. Drives the exercise picker, Swap suggestions and Plan my week's Away days. */
 export function GymScreen() {
+  const { gymId } = useParams()
   const { db, store } = useData()
-  const info = useMainGym()
+  const info = useGym(gymId)
+  const confirm = useConfirm()
+  const navigate = useNavigate()
   const hidden = useLiveQuery(
     async () => (info ? (await db.exercises.bulkGet([...info.unavailableIds])).filter((e) => e !== undefined) : []),
     [db, info],
@@ -49,7 +53,11 @@ export function GymScreen() {
         }}
         className="mb-1 w-full rounded-lg bg-transparent text-2xl font-semibold outline-none focus:bg-surface-2"
       />
-      <p className="mb-4 text-sm text-muted">Swap and the exercise search only suggest what's ticked here.</p>
+      <p className="mb-4 text-sm text-muted">
+        {gym.is_default
+          ? "Your usual gym. Swap and the exercise search only suggest what's ticked here."
+          : 'Plan my week uses this on days you mark Away here: exercises are swapped to what\'s ticked.'}
+      </p>
 
       <h2 className="mb-2 font-semibold">Equipment</h2>
       <div className="mb-6 flex flex-wrap gap-2">
@@ -88,14 +96,27 @@ export function GymScreen() {
       ) : (
         <p className="text-sm text-muted">Nothing hidden. Use ⋯ → "Not at this gym" on an exercise during a workout.</p>
       )}
+      {!gym.is_default && (
+        <button
+          type="button"
+          onClick={async () => {
+            if (!(await confirm({ title: `Delete “${gym.name}”?`, message: 'Away days set to this gym become "No gym".', confirmLabel: 'Delete', danger: true }))) return
+            await store.remove('equipment_profiles', gym.id)
+            navigate('/more/gyms', { replace: true })
+          }}
+          className="mt-8 flex min-h-12 w-full items-center justify-center gap-2 text-sm text-danger"
+        >
+          <Trash2 size={16} /> Delete this gym
+        </button>
+      )}
     </>
   )
 }
 
 function Back() {
   return (
-    <Link to="/more" className="-ml-2 mb-2 inline-flex min-h-12 items-center text-muted">
-      <ChevronLeft size={20} /> More
+    <Link to="/more/gyms" className="-ml-2 mb-2 inline-flex min-h-12 items-center text-muted">
+      <ChevronLeft size={20} /> Gyms
     </Link>
   )
 }

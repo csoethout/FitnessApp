@@ -125,6 +125,13 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   opting in); from then the Today card follows the plan (with its notes) and starts workouts with the planned
   exercises and `week_plan_day_id`. Weeks without rows use the template as before. Day rows are never deleted
   (unique per date); "Reset" sets all back to normal.
+- Gyms (step 5.4): `equipment_profiles`, one `is_default` (usual gym; drives picker/Swap); others are for Away days
+  (Plan my week). More → Gyms (`/more/gyms`, presets Hotel/Home/Bodyweight/Full), editor `/more/gym/:id`, delete
+  (soft) for non-default; a deleted gym on an Away day falls back to "No gym".
+- Cardio (step 5.4): `cardio_entries` (Dexie v6), Today → Cardio card: one-tap "Walk" repeats your last walk
+  (default 20 min / 1 mi), "Other" sheet (activity, minutes, miles optional). Distance stored in km, shown in miles.
+- Settings (step 5.4): profile.settings.restTimer / askEffort (default on). "Couldn't finish" is always offered.
+  kg units deliberately NOT built (owner uses lb; ~15 files show lb): see Backlog.
 - Sync: one IndexedDB per user (`liftlog-<uid>`), deleted on sign-out (after warning about unsynced changes).
   Server owns `updated_at`; pull uses keyset (updated_at, id); rows with pending local edits are never overwritten;
   server-rejected rows are marked failed (shown in More) instead of blocking the queue. Syncs on write (debounced),
@@ -267,18 +274,20 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         Create: "Save as meal" under a meal on the Food day (quick adds left out) or Food → 🍴 → New meal. Editor
         `/food/meals/:id`: name, servings it makes, items (amount sheet, remove), Add food = AddFoodSheet `pickOnly`
         mode (same Recent/Search/Scan/Label; same food twice merges), delete (logged days keep their entries)
-- [ ] **Phase 5: rules-based planner, Plan my week, equipment profiles, cardio logging**
+- [x] **Phase 5: rules-based planner, Plan my week, equipment profiles, cardio logging** (built 2026-10-15)
   - [x] 5.1 Progression targets: double progression pre-fills each exercise; logger shows rep range + reason
         (↑ green weight increase, ↓ amber deload)
   - [x] 5.2 Biweekly calorie check-in: card on Food/plan page when due → Apply / Keep as is; Reset on plan page
   - [x] 5.3 Plan my week: Train → Plan my week (`/train/week`, this/next week), per-day Normal/Short (minutes)/
         Busy/Away (No gym or another gym profile), notes explaining every change, est. minutes; Today card follows
         the plan; `week_plans`/`week_plan_days` synced (Dexie v5)
-  - [ ] 5.4 Equipment profiles, cardio logging, settings (units, timer/RIR toggles)
+  - [x] 5.4 Gyms (equipment profiles for Away days), cardio logging (Today card), settings (rest timer / effort toggles)
+  - [ ] Owner: test Phase 5 on iPhone
 - [ ] **Phase 6: PWA install, offline sync, CSV export**
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**
 
 ## Backlog (not in MVP)
+- kg units setting (profile.unit_system exists; replace the lb constants: WEIGHT_UNIT, UNIT in screens, body/plan screens)
 - **Before sharing with anyone: remove Testing tools** and OWNER_DEFAULTS in `NutritionPlanScreen.tsx`; (`src/components/TestingTools.tsx`, `src/data/sample.ts`)
 - Suggested workout times from availability blocks (e.g. busy 8am–6pm) + one-off commitments
 - Google Calendar sync (adds OAuth + privacy surface)

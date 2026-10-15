@@ -67,14 +67,18 @@ export function TodayWorkoutCard() {
               {n}
             </p>
           ))}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void go()}
-            className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-accent text-lg font-semibold text-accent-ink disabled:opacity-50"
-          >
-            <Play size={20} fill="currentColor" /> Start workout
-          </button>
+          {session.exercises?.length === 0 ? (
+            <p className="mt-2 text-sm">Log it under Cardio below when you're done.</p>
+          ) : (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void go()}
+              className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-accent text-lg font-semibold text-accent-ink disabled:opacity-50"
+            >
+              <Play size={20} fill="currentColor" /> Start workout
+            </button>
+          )}
         </>
       ) : (
         <>

@@ -129,6 +129,10 @@ export type ProfileSettings = {
   nutritionAdjust?: { kcal: number; protein_g: number; fat_g: number }
   /** Accepted 2-week calorie check-ins (src/lib/planner/checkIn.ts); their kcal changes add up on top of the plan. */
   checkIns?: { date: string; rate_pct_week: number | null; change_kcal: number }[]
+  /** Start the rest timer after each set (default on). */
+  restTimer?: boolean
+  /** Ask "reps left in the tank?" after each set (default on). "Couldn't finish" is always offered. */
+  askEffort?: boolean
 }
 
 export type Goal = Owned & {
@@ -202,6 +206,15 @@ export type NutritionTarget = Owned & {
 }
 
 /** Tables the app reads and writes locally, mapped to their row types. */
+export type CardioActivity = 'walk' | 'run' | 'bike' | 'row' | 'swim' | 'other'
+export type CardioEntry = Owned & {
+  performed_on: string // local YYYY-MM-DD
+  activity: CardioActivity
+  duration_min: number
+  distance_km: number | null // stored in km, shown in miles
+  notes: string | null
+}
+
 /** One week of "Plan my week" (week_start = the Sunday). Only your day settings are stored; the plan is computed. */
 export type WeekPlan = Owned & { template_id: string | null; week_start: string }
 export type WeekPlanDay = Owned & {
@@ -230,6 +243,7 @@ export type Tables = {
   workouts: Workout
   workout_exercises: WorkoutExercise
   sets: WorkoutSet
+  cardio_entries: CardioEntry
   body_measurements: BodyMeasurement
   foods: Food
   saved_meals: SavedMeal
@@ -256,6 +270,7 @@ export const SYNC_ORDER: TableName[] = [
   'workouts',
   'workout_exercises',
   'sets',
+  'cardio_entries',
   'body_measurements',
   'foods',
   'saved_meals',
@@ -283,6 +298,7 @@ export const OWNER_COLUMN: Record<TableName, 'user_id' | 'owner_id' | 'id'> = {
   workouts: 'user_id',
   workout_exercises: 'user_id',
   sets: 'user_id',
+  cardio_entries: 'user_id',
   body_measurements: 'user_id',
   foods: 'owner_id',
   saved_meals: 'user_id',

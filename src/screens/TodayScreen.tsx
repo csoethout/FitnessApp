@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CardioCard } from '@/components/CardioCard'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { TodayWorkoutCard } from '@/components/TodayWorkoutCard'
 import { TodayFoodCard } from '@/components/TodayFoodCard'
@@ -14,6 +15,7 @@ export function TodayScreen() {
       <div className="space-y-3">
         <TodayWorkoutCard />
         <WeighInCard />
+        <CardioCard />
         <TodayFoodCard />
       </div>
     </>

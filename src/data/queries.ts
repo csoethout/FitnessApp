@@ -88,6 +88,22 @@ export function useActiveWorkout() {
 }
 
 /** The default gym and the exercises marked "Not at this gym" there. undefined while loading. */
+/** One gym (equipment profile) and its hidden exercises; the usual gym when no id. undefined while loading. */
+export function useGym(gymId: string | undefined) {
+  const { db } = useData()
+  return useLiveQuery(async () => {
+    const gyms = live(await db.equipment_profiles.toArray())
+    const gym = (gymId ? gyms.find((g) => g.id === gymId) : gyms.find((p) => p.is_default)) ?? null
+    const hidden = gym ? live(await db.exercise_unavailable.where('equipment_profile_id').equals(gym.id).toArray()) : []
+    return { gym, unavailableIds: new Set(hidden.map((h) => h.exercise_id)) }
+  }, [db, gymId])
+}
+
+export function useGyms() {
+  const { db } = useData()
+  return useLiveQuery(async () => live(await db.equipment_profiles.toArray()).sort((a, b) => Number(b.is_default) - Number(a.is_default) || a.name.localeCompare(b.name)), [db])
+}
+
 export function useMainGym() {
   const { db } = useData()
   return useLiveQuery(async () => {

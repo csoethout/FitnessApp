@@ -8,6 +8,7 @@ import { Sheet, SheetAction } from '@/components/Sheet'
 import { SwapSheet } from '@/components/SwapSheet'
 import { Stepper } from '@/components/Stepper'
 import { useData } from '@/data/DataProvider'
+import { useAppSettings } from '@/data/profile'
 import { useMainGym, useWorkout, type WorkoutItem } from '@/data/queries'
 import { markUnavailable, replaceInPlan, swapInWorkout } from '@/data/swap'
 import type { Exercise, WorkoutSet } from '@/data/types'
@@ -39,6 +40,7 @@ export function WorkoutScreen() {
   const now = useNow()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [justDoneId, setJustDoneId] = useState<string | null>(null)
+  const settings = useAppSettings()
   const [picking, setPicking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const confirm = useConfirm()
@@ -69,7 +71,7 @@ export function WorkoutScreen() {
     unlockAudio() // must happen during the tap for iOS to allow the end-of-rest beep
     const isLastSet = remaining === 1
     await store.update('sets', set.id, { completed_at: nowIso() })
-    if (isLastSet) restTimer.skip()
+    if (isLastSet || settings?.restTimer === false) restTimer.skip()
     else restTimer.start(restAfterSet(set.set_type, item.restSeconds), workout.id)
     setEditingId(null)
     setJustDoneId(set.id)
@@ -166,6 +168,7 @@ export function WorkoutScreen() {
             justDoneId={justDoneId}
             onEdit={(id) => setEditingId(editingId === id ? null : id)}
             offerWarmups={item.we.id === warmupExerciseId}
+            askEffort={settings?.askEffort !== false}
             onComplete={(s) => void complete(s, item)}
             onSwap={() => setSwapFor({ item, planDefault: false })}
             onMenu={() => setMenuFor(item)}
@@ -247,8 +250,9 @@ function ExerciseCard(props: {
   onSwap: () => void
   onMenu: () => void
   offerWarmups: boolean
+  askEffort: boolean
 }) {
-  const { item, isActive, editingId, justDoneId, onEdit, onComplete, onSwap, onMenu, offerWarmups } = props
+  const { item, isActive, editingId, justDoneId, onEdit, onComplete, onSwap, onMenu, offerWarmups, askEffort } = props
   const { store } = useData()
   const current = currentSetIndex(item.sets)
   const lastTime = formatLastTime(item.last, UNIT)
@@ -297,7 +301,7 @@ function ExerciseCard(props: {
               ) : (
                 <SetSummary set={set} label={label} onTap={() => onEdit(set.id)} />
               )}
-              {justDoneId === set.id && !expanded && <AfterSetRow set={set} />}
+              {justDoneId === set.id && !expanded && <AfterSetRow set={set} askEffort={askEffort} />}
             </li>
           )
         })}
@@ -425,17 +429,21 @@ function SetEditor(props: {
 }
 
 /** Optional details right after logging a set. Ignoring it is fine; it disappears after the next set. */
-function AfterSetRow({ set }: { set: WorkoutSet }) {
+function AfterSetRow({ set, askEffort }: { set: WorkoutSet; askEffort: boolean }) {
   const { store } = useData()
   const update = (changes: Partial<WorkoutSet>) => void store.update('sets', set.id, changes)
   return (
     <div className="flex flex-wrap items-center gap-2 px-4 pb-3 pl-13">
-      <span className="text-xs text-muted">Reps left in the tank?</span>
-      {[0, 1, 2, 3, 4].map((n) => (
-        <Toggle key={n} active={set.rir === n} onClick={() => update({ rir: set.rir === n ? null : n })} compact>
-          {n === 4 ? '4+' : String(n)}
-        </Toggle>
-      ))}
+      {askEffort && (
+        <>
+          <span className="text-xs text-muted">Reps left in the tank?</span>
+          {[0, 1, 2, 3, 4].map((n) => (
+            <Toggle key={n} active={set.rir === n} onClick={() => update({ rir: set.rir === n ? null : n })} compact>
+              {n === 4 ? '4+' : String(n)}
+            </Toggle>
+          ))}
+        </>
+      )}
       <Toggle
         active={set.set_type === 'limited'}
         onClick={() => update({ set_type: set.set_type === 'limited' ? 'working' : 'limited' })}

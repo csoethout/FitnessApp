@@ -121,3 +121,20 @@ export function useNutritionPlan() {
   const { db, store } = useData()
   return useLiveQuery(() => loadPlanState(db, store.userId, localDateKey(new Date())), [db, store.userId])
 }
+
+export type AppSettings = { restTimer: boolean; askEffort: boolean }
+const DEFAULT_SETTINGS: AppSettings = { restTimer: true, askEffort: true }
+
+/** Workout settings with defaults filled in. undefined while loading. */
+export function useAppSettings(): AppSettings | undefined {
+  const { db, store } = useData()
+  return useLiveQuery(async () => {
+    const s = (await db.profiles.get(store.userId))?.settings ?? {}
+    return { restTimer: s.restTimer ?? DEFAULT_SETTINGS.restTimer, askEffort: s.askEffort ?? DEFAULT_SETTINGS.askEffort }
+  }, [db, store.userId])
+}
+
+export async function saveAppSetting(store: LocalStore, changes: Partial<AppSettings>) {
+  const profile = await store.db.profiles.get(store.userId)
+  await saveProfile(store, { settings: { ...(profile?.settings ?? {}), ...changes } })
+}

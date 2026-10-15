@@ -61,5 +61,9 @@ export function openLocalDb(userId: string): LocalDb {
     week_plans: 'id, week_start',
     week_plan_days: 'id, week_plan_id, plan_date',
   })
+  // v6 (Phase 5): cardio (walks, runs…).
+  db.version(6).stores({
+    cardio_entries: 'id, performed_on',
+  })
   return db
 }
