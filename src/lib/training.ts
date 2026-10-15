@@ -50,3 +50,8 @@ export function filterExercises(all: Exercise[], f: ExerciseFilter): Exercise[] 
 function levelRank(e: Exercise) {
   return e.level === 'expert' || e.category === 'olympic weightlifting' || e.category === 'strongman' ? 1 : 0
 }
+
+/** Rest after a set: warm-ups are short; otherwise the exercise's own rest. */
+export function restAfterSet(setType: 'warmup' | 'working' | 'limited', exerciseRestSeconds: number): number {
+  return setType === 'warmup' ? 60 : exerciseRestSeconds
+}

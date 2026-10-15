@@ -119,6 +119,10 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   data), then same muscles/mechanic/force/equipment/name words; expert/olympic/risky (guillotine, behind-the-neck…)
   sink. Swap mid-exercise keeps logged sets and continues in a new card. "Not at this gym" defaults to also replacing
   the exercise in the weekly plan.
+- Rest timer (`src/lib/restTimer.ts`): stored as an end time in localStorage (per-device, not synced). Warm-up
+  sets rest 60 s; otherwise the plan's rest (3/2/1 min). Beep is Web Audio scheduled at the ✓ tap (iOS needs a tap
+  to unlock audio; the silent switch mutes it; no sound when the screen is locked, hence the wake lock).
+  No timer after the workout's last set.
 - Allowed values are text + CHECK constraints, not Postgres enums (easier to extend).
 - Supabase "publishable"/anon key is safe in the frontend because RLS protects data. The service-role key is
   never in frontend code or the repo.
@@ -159,7 +163,8 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         one expanded set, ✓ logs pre-filled values, tap number to type, changes carry to later pending sets,
         optional RIR / couldn't-finish row, warm-up toggle, add set/exercise, finish (drops undone sets), delete
   - [x] 2.5 Swap (logger + day editor), "Not at this gym" (logger ⋯ menu + day editor button), remove; More → gym page
-  - [ ] 2.6 Rest timer, wake lock, warm-ups
+  - [x] 2.6 Rest timer bar (auto-start, ±15, 1/2/3 min, skip, beep + mute, survives reload), wake lock,
+        warm-up offer on first compound (bar×10, 50%×5, 70%×3, 85%×1; ≥10 lb jumps)
   - [ ] 2.7 Finish summary + workout history
 - [ ] **Phase 3: progress views and charts**
 - [ ] **Phase 4: body weight (+ body fat %, muscle mass) and food/macro tracking**

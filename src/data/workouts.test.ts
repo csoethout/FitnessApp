@@ -62,3 +62,21 @@ describe('workout flow', () => {
     expect(added).toMatchObject({ position: 1, weight_kg: 20, reps: 12, completed_at: null })
   })
 })
+
+describe('addWarmups', () => {
+  it('puts warm-ups first and keeps working sets in order after them', async () => {
+    const { addWarmups } = await import('./workouts')
+    const id = await startWorkout(store, 'Legs', [{ exercise_id: 'squat', sets: 2, rep_min: 6 }])
+    const [first] = await setsOf(id)
+    await addWarmups(store, first.workout_exercise_id, [
+      { weight_kg: 20, reps: 10 },
+      { weight_kg: 50, reps: 5 },
+    ])
+    expect((await setsOf(id)).map((s) => [s.position, s.set_type])).toEqual([
+      [0, 'warmup'],
+      [1, 'warmup'],
+      [2, 'working'],
+      [3, 'working'],
+    ])
+  })
+})

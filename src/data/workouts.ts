@@ -90,3 +90,22 @@ export async function finishWorkout(store: LocalStore, workoutId: string) {
 export async function discardWorkout(store: LocalStore, workoutId: string) {
   await store.remove('workouts', workoutId)
 }
+
+/** Insert warm-up sets before the working sets of an exercise (positions shift down). */
+export async function addWarmups(
+  store: LocalStore,
+  workoutExerciseId: string,
+  plan: { weight_kg: number; reps: number }[],
+) {
+  const { db } = store
+  await db.transaction('rw', [db.sets, db.outbox], async () => {
+    const sets = live(await db.sets.where('workout_exercise_id').equals(workoutExerciseId).toArray())
+    for (const s of sets) await store.update('sets', s.id, { position: s.position + plan.length })
+    for (const [i, w] of plan.entries()) {
+      await store.insert('sets', {
+        workout_exercise_id: workoutExerciseId, position: i, set_type: 'warmup', weight_kg: w.weight_kg, reps: w.reps,
+        rir: null, completed_at: null,
+      })
+    }
+  })
+}

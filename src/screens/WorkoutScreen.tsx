@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useConfirm } from '@/components/ConfirmProvider'
 import { ExercisePicker } from '@/components/ExercisePicker'
+import { RestTimerBar } from '@/components/RestTimerBar'
 import { Sheet, SheetAction } from '@/components/Sheet'
 import { SwapSheet } from '@/components/SwapSheet'
 import { Stepper } from '@/components/Stepper'
@@ -10,14 +11,18 @@ import { useData } from '@/data/DataProvider'
 import { useMainGym, useWorkout, type WorkoutItem } from '@/data/queries'
 import { markUnavailable, replaceInPlan, swapInWorkout } from '@/data/swap'
 import type { Exercise, WorkoutSet } from '@/data/types'
-import { addExercise, addSet, discardWorkout, finishWorkout } from '@/data/workouts'
+import { addExercise, addSet, addWarmups, discardWorkout, finishWorkout } from '@/data/workouts'
 import { cascadeIds, currentSetIndex, formatElapsed, formatLastTime, formatWeight } from '@/lib/logger'
-import { defaultRepRange } from '@/lib/training'
+import { restTimer, unlockAudio } from '@/lib/restTimer'
+import { defaultRepRange, restAfterSet } from '@/lib/training'
+import { useWakeLock } from '@/lib/useWakeLock'
+import { warmupPlan } from '@/lib/warmup'
 import { displayWeight, toStoredKg, type WeightUnit } from '@/lib/units'
 import { useNow } from '@/lib/useNow'
 
 const UNIT: WeightUnit = 'lb' // Profile setting arrives in Phase 5; owner uses lb.
 const WEIGHT_STEP = 5
+const nowIso = () => new Date().toISOString()
 
 /**
  * The gym screen. Design rules (CLAUDE.md → Logger UX):
@@ -40,6 +45,7 @@ export function WorkoutScreen() {
   const [menuFor, setMenuFor] = useState<WorkoutItem | null>(null)
   const [swapFor, setSwapFor] = useState<{ item: WorkoutItem; planDefault: boolean } | null>(null)
   const usedIds = useMemo(() => new Set(data?.items.map((it) => it.we.exercise_id)), [data])
+  useWakeLock(Boolean(data?.workout && !data.workout.ended_at))
 
   if (data === undefined) return null
   if (data === null) {
@@ -55,9 +61,15 @@ export function WorkoutScreen() {
   const remaining = items.reduce((n, it) => n + it.sets.filter((s) => !s.completed_at).length, 0)
   // The exercise you're on: the first one with sets left. Only its current set is shown big.
   const activeExerciseId = items.find((it) => currentSetIndex(it.sets) >= 0)?.we.id
+  // Warm-ups are offered only for the first compound lift of the session (CLAUDE.md).
+  const warmupExerciseId = items.find((it) => it.exercise?.mechanic === 'compound')?.we.id
 
-  async function complete(set: WorkoutSet) {
-    await store.update('sets', set.id, { completed_at: new Date().toISOString() })
+  async function complete(set: WorkoutSet, item: WorkoutItem) {
+    unlockAudio() // must happen during the tap for iOS to allow the end-of-rest beep
+    const isLastSet = remaining === 1
+    await store.update('sets', set.id, { completed_at: nowIso() })
+    if (isLastSet) restTimer.skip()
+    else restTimer.start(restAfterSet(set.set_type, item.restSeconds), workout.id)
     setEditingId(null)
     setJustDoneId(set.id)
     // Bring the next set into view (it may be in the next exercise card).
@@ -146,7 +158,8 @@ export function WorkoutScreen() {
             editingId={editingId}
             justDoneId={justDoneId}
             onEdit={(id) => setEditingId(editingId === id ? null : id)}
-            onComplete={(s) => void complete(s)}
+            offerWarmups={item.we.id === warmupExerciseId}
+            onComplete={(s) => void complete(s, item)}
             onSwap={() => setSwapFor({ item, planDefault: false })}
             onMenu={() => setMenuFor(item)}
           />
@@ -172,6 +185,8 @@ export function WorkoutScreen() {
           Delete workout
         </button>
       </main>
+
+      <RestTimerBar workoutId={workout.id} />
 
       {menuFor && (
         <Sheet title={menuFor.exercise?.name ?? 'Exercise'} onClose={() => setMenuFor(null)}>
@@ -224,8 +239,9 @@ function ExerciseCard(props: {
   onComplete: (set: WorkoutSet) => void
   onSwap: () => void
   onMenu: () => void
+  offerWarmups: boolean
 }) {
-  const { item, isActive, editingId, justDoneId, onEdit, onComplete, onSwap, onMenu } = props
+  const { item, isActive, editingId, justDoneId, onEdit, onComplete, onSwap, onMenu, offerWarmups } = props
   const { store } = useData()
   const current = currentSetIndex(item.sets)
   const lastTime = formatLastTime(item.last, UNIT)
@@ -245,6 +261,8 @@ function ExerciseCard(props: {
           <Ellipsis size={20} />
         </button>
       </div>
+
+      {offerWarmups && <WarmupOffer item={item} />}
 
       <ul className="mt-2">
         {item.sets.map((set, i) => {
@@ -427,5 +445,27 @@ function Toggle(props: { active: boolean; onClick: () => void; compact?: boolean
     >
       {children}
     </button>
+  )
+}
+
+/** "Add warm-ups" chip with a preview of the ramp, shown until warm-ups exist or a set is logged. */
+function WarmupOffer({ item }: { item: WorkoutItem }) {
+  const { store } = useData()
+  if (item.sets.some((s) => s.set_type === 'warmup' || s.completed_at)) return null
+  const firstWorking = item.sets.find((s) => s.set_type !== 'warmup')
+  const plan = firstWorking ? warmupPlan(firstWorking.weight_kg, item.exercise?.equipment ?? null) : []
+  if (!plan.length) {
+    return <p className="px-4 pt-2 text-xs text-muted">Set your working weight to get warm-up suggestions.</p>
+  }
+  return (
+    <div className="px-4 pt-2">
+      <button
+        type="button"
+        onClick={() => void addWarmups(store, item.we.id, plan)}
+        className="min-h-11 w-full rounded-xl border border-amber-400/50 px-3 text-left text-sm text-amber-400"
+      >
+        + Add warm-ups: {plan.map((w) => `${formatWeight(w.weight_kg, UNIT)}×${w.reps}`).join(' · ')}
+      </button>
+    </div>
   )
 }
