@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronRight } from 'lucide-react'
+import { CalendarDays, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { HistoryList } from '@/components/HistoryList'
@@ -27,6 +27,14 @@ function WeekOverview({ days }: { days: NonNullable<ReturnType<typeof useActiveW
   return (
     <div className="space-y-3">
       <TodayWorkoutCard />
+      <Link to="/train/week" className="flex min-h-14 items-center gap-3 rounded-2xl border border-border bg-surface px-4">
+        <CalendarDays size={20} className="text-accent" />
+        <span className="flex-1">
+          <span className="block font-medium">Plan my week</span>
+          <span className="block text-xs text-muted">Short, busy or away days? The week adapts.</span>
+        </span>
+        <ChevronRight className="text-muted" size={20} aria-hidden />
+      </Link>
       <ul className="overflow-hidden rounded-2xl border border-border bg-surface">
         {days.map((d) => (
           <li key={d.id} className="border-b border-border last:border-b-0">
@@ -43,7 +51,7 @@ function WeekOverview({ days }: { days: NonNullable<ReturnType<typeof useActiveW
           </li>
         ))}
       </ul>
-      <p className="px-1 text-xs text-muted">Tap a day to change its name or exercises.</p>
+      <p className="px-1 text-xs text-muted">Your usual week. Tap a day to change its name or exercises.</p>
       <div className="flex items-baseline justify-between px-1 pt-3">
         <h2 className="font-semibold">Recent workouts</h2>
         <Link to="/history" className="min-h-10 text-sm text-accent">

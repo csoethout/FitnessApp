@@ -202,6 +202,19 @@ export type NutritionTarget = Owned & {
 }
 
 /** Tables the app reads and writes locally, mapped to their row types. */
+/** One week of "Plan my week" (week_start = the Sunday). Only your day settings are stored; the plan is computed. */
+export type WeekPlan = Owned & { template_id: string | null; week_start: string }
+export type WeekPlanDay = Owned & {
+  week_plan_id: string
+  plan_date: string
+  status: 'normal' | 'short' | 'busy' | 'away'
+  minutes_available: number | null // for "short"
+  equipment_profile_id: string | null // for "away": that gym; null = no gym (bodyweight)
+  source_template_day_id: string | null
+  session_name: string | null
+  notes: string | null
+}
+
 export type Tables = {
   profiles: Profile
   goals: Goal
@@ -212,6 +225,8 @@ export type Tables = {
   plan_templates: PlanTemplate
   plan_template_days: PlanTemplateDay
   plan_template_exercises: PlanTemplateExercise
+  week_plans: WeekPlan
+  week_plan_days: WeekPlanDay
   workouts: Workout
   workout_exercises: WorkoutExercise
   sets: WorkoutSet
@@ -236,6 +251,8 @@ export const SYNC_ORDER: TableName[] = [
   'plan_templates',
   'plan_template_days',
   'plan_template_exercises',
+  'week_plans',
+  'week_plan_days',
   'workouts',
   'workout_exercises',
   'sets',
@@ -261,6 +278,8 @@ export const OWNER_COLUMN: Record<TableName, 'user_id' | 'owner_id' | 'id'> = {
   plan_templates: 'user_id',
   plan_template_days: 'user_id',
   plan_template_exercises: 'user_id',
+  week_plans: 'user_id',
+  week_plan_days: 'user_id',
   workouts: 'user_id',
   workout_exercises: 'user_id',
   sets: 'user_id',

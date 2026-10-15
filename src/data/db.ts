@@ -56,5 +56,10 @@ export function openLocalDb(userId: string): LocalDb {
     profiles: 'id',
     goals: 'id',
   })
+  // v5 (Phase 5): "Plan my week" day settings.
+  db.version(5).stores({
+    week_plans: 'id, week_start',
+    week_plan_days: 'id, week_plan_id, plan_date',
+  })
   return db
 }

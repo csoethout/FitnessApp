@@ -114,6 +114,17 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   Rep range = the plan row for the exercise (the started day's row first), else 6–10 compound / 10–15 isolation.
   The logger shows the range and a one-line reason; nothing is stored. Ramp-in weeks not implemented (owner is
   already training; revisit if needed). Units are lb until the settings step (WEIGHT_UNIT in `src/data/workouts.ts`).
+- Plan my week (`src/lib/planner/week.ts`, step 5.3): only the day settings are stored (`week_plans` + 7
+  `week_plan_days` rows: status, minutes_available, equipment_profile_id; null = no gym). The plan is recomputed from
+  the active template + settings + workouts logged (a workout started that local date = done); `week_plan_exercises`
+  is unused. Rules: busy days and past sessions with no workout move to free rest days (most main lifts first,
+  nearest day, later on a tie); no free day → main lifts (or first 2 exercises) merge into the shortest training
+  day ahead, max one merge per day; away = that gym's equipment or bodyweight ('body only'), swaps via
+  rankAlternatives, nothing left → "Run or walk"; short = drop non-main lifts from the end, then sets (min 2).
+  Time estimate = sets × (40 s + rest) + 1 min per exercise. Opening Plan my week for a week creates its rows (=
+  opting in); from then the Today card follows the plan (with its notes) and starts workouts with the planned
+  exercises and `week_plan_day_id`. Weeks without rows use the template as before. Day rows are never deleted
+  (unique per date); "Reset" sets all back to normal.
 - Sync: one IndexedDB per user (`liftlog-<uid>`), deleted on sign-out (after warning about unsynced changes).
   Server owns `updated_at`; pull uses keyset (updated_at, id); rows with pending local edits are never overwritten;
   server-rejected rows are marked failed (shown in More) instead of blocking the queue. Syncs on write (debounced),
@@ -260,7 +271,9 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] 5.1 Progression targets: double progression pre-fills each exercise; logger shows rep range + reason
         (↑ green weight increase, ↓ amber deload)
   - [x] 5.2 Biweekly calorie check-in: card on Food/plan page when due → Apply / Keep as is; Reset on plan page
-  - [ ] 5.3 Plan my week (per-day normal / short / busy / away; move, merge, shorten, swap)
+  - [x] 5.3 Plan my week: Train → Plan my week (`/train/week`, this/next week), per-day Normal/Short (minutes)/
+        Busy/Away (No gym or another gym profile), notes explaining every change, est. minutes; Today card follows
+        the plan; `week_plans`/`week_plan_days` synced (Dexie v5)
   - [ ] 5.4 Equipment profiles, cardio logging, settings (units, timer/RIR toggles)
 - [ ] **Phase 6: PWA install, offline sync, CSV export**
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**

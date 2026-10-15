@@ -69,11 +69,11 @@ export async function activeWorkout(db: LocalDb) {
 }
 
 /** Create a workout with its exercises and sets pre-filled by the progression rules. Returns the workout id. */
-export async function startWorkout(store: LocalStore, name: string, planned: PlannedExercise[]): Promise<string> {
+export async function startWorkout(store: LocalStore, name: string, planned: PlannedExercise[], weekPlanDayId: string | null = null): Promise<string> {
   const { db } = store
   return db.transaction('rw', addExerciseTables(db), async () => {
     const workout = await store.insert('workouts', {
-      name, started_at: new Date().toISOString(), ended_at: null, week_plan_day_id: null, equipment_profile_id: null, notes: null,
+      name, started_at: new Date().toISOString(), ended_at: null, week_plan_day_id: weekPlanDayId, equipment_profile_id: null, notes: null,
     })
     for (const [position, p] of planned.entries()) {
       await addExercise(store, workout.id, p, position)

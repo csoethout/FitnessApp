@@ -3,19 +3,24 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { useActiveWeek, useActiveWorkout } from '@/data/queries'
 import { useStartWorkout } from '@/data/useStartWorkout'
+import { useTodayPlan } from '@/data/weekPlan'
 import { formatElapsed } from '@/lib/logger'
 import { useNow } from '@/lib/useNow'
 
-/** "Resume" if a workout is running; otherwise today's planned session with a big Start button. */
+/**
+ * "Resume" if a workout is running; otherwise today's session with a big Start button: from Plan my week when
+ * you've planned this week (with its notes), else from the weekly template.
+ */
 export function TodayWorkoutCard() {
   const active = useActiveWorkout()
   const week = useActiveWeek()
+  const planned = useTodayPlan()
   const start = useStartWorkout()
   const now = useNow(30_000)
   const [today] = useState(() => new Date().getDay())
   const [busy, setBusy] = useState(false)
 
-  if (active === undefined || week === undefined) return null
+  if (active === undefined || week === undefined || planned === undefined) return null
 
   if (active) {
     return (
@@ -27,10 +32,22 @@ export function TodayWorkoutCard() {
     )
   }
 
-  const day = week.days.find((d) => d.day_of_week === today)
-  const go = async (id: string | null, name: string) => {
+  const templateDay = week.days.find((d) => d.day_of_week === today)
+  const session = planned
+    ? planned.day.session
+    : templateDay && !templateDay.is_rest
+      ? { name: templateDay.name, templateDayId: templateDay.id, exercises: null }
+      : null
+  const notes = planned?.day.notes ?? []
+  const go = async () => {
     setBusy(true)
-    await start(id, name)
+    if (planned && session?.exercises) await start(session.templateDayId, session.name, { exercises: session.exercises, weekPlanDayId: planned.row?.id ?? null })
+    else await start(session?.templateDayId ?? null, session?.name ?? 'Workout')
+    setBusy(false)
+  }
+  const goEmpty = async () => {
+    setBusy(true)
+    await start(null, 'Workout')
     setBusy(false)
   }
 
@@ -39,25 +56,40 @@ export function TodayWorkoutCard() {
       <p className="text-sm text-muted">Today</p>
       {!week.template ? (
         <p className="text-lg">Set up your week on the Train tab.</p>
-      ) : day && !day.is_rest ? (
+      ) : session ? (
         <>
-          <p className="text-lg font-semibold">{day.name}</p>
+          <p className="text-lg font-semibold">
+            {session.name}
+            {planned && planned.day.minutes > 0 && <span className="ml-2 text-sm font-normal text-muted">~{planned.day.minutes} min</span>}
+          </p>
+          {notes.map((n) => (
+            <p key={n} className="text-sm text-muted">
+              {n}
+            </p>
+          ))}
           <button
             type="button"
             disabled={busy}
-            onClick={() => void go(day.id, day.name)}
+            onClick={() => void go()}
             className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-accent text-lg font-semibold text-accent-ink disabled:opacity-50"
           >
             <Play size={20} fill="currentColor" /> Start workout
           </button>
         </>
       ) : (
-        <p className="text-lg font-semibold">Rest day</p>
+        <>
+          <p className="text-lg font-semibold">Rest day</p>
+          {notes.map((n) => (
+            <p key={n} className="text-sm text-muted">
+              {n}
+            </p>
+          ))}
+        </>
       )}
       <button
         type="button"
         disabled={busy}
-        onClick={() => void go(null, 'Workout')}
+        onClick={() => void goEmpty()}
         className="mt-2 min-h-12 w-full rounded-xl text-sm text-muted"
       >
         Start an empty workout
