@@ -8,8 +8,9 @@
 //   4. short days drop non-main lifts from the end, then trim sets (not below 2), until the session fits.
 // Nothing here is stored: the plan is recomputed from the template, your day settings and what you've done.
 import type { Exercise } from '@/data/types'
+import { BODYWEIGHT_STAPLES } from '../staples'
 import { rankAlternatives } from '../swap'
-import { defaultRestSeconds } from '../training'
+import { defaultRestSeconds, MUSCLE_GROUPS } from '../training'
 
 export type DayStatus = 'normal' | 'short' | 'busy' | 'away'
 
@@ -58,6 +59,39 @@ export function estimateMinutes(exercises: PlanExercise[], catalog: Map<string, 
     return s + e.sets * (WORK_SECONDS_PER_SET + rest) + SETUP_SECONDS_PER_EXERCISE
   }, 0)
   return Math.round(seconds / 60)
+}
+
+const BODYWEIGHT_SIZE = 5
+
+/**
+ * A no-equipment version of a session: everyday bodyweight moves for the muscles it trains (main lifts' muscles
+ * first), topped up with legs and core, 3 × 10–20 each, then a short run or walk. Null if none are in the library.
+ */
+export function bodyweightSession(exercises: PlanExercise[], catalog: Exercise[]): PlanExercise[] | null {
+  const bySource = new Map(catalog.filter((e) => e.source_id).map((e) => [e.source_id!, e]))
+  const byId = new Map(catalog.map((e) => [e.id, e]))
+  const groupOf = (m: string) => MUSCLE_GROUPS.find((g) => g.muscles.includes(m))?.label
+  const groups: string[] = []
+  for (const e of [...exercises].sort((a, b) => Number(b.is_main_lift) - Number(a.is_main_lift))) {
+    for (const m of byId.get(e.exercise_id)?.primary_muscles ?? []) {
+      const g = groupOf(m)
+      if (g && !groups.includes(g)) groups.push(g)
+    }
+  }
+  for (const g of ['Legs', 'Core', 'Conditioning']) if (!groups.includes(g)) groups.push(g)
+  const picked: Exercise[] = []
+  // Round-robin over the groups so every trained muscle gets one move before any gets a second
+  // (conditioning only ever gets one).
+  for (let round = 0; picked.length < BODYWEIGHT_SIZE && round < 4; round++) {
+    for (const g of groups) {
+      if (picked.length >= BODYWEIGHT_SIZE) break
+      if (round > 0 && g === 'Conditioning') continue
+      const next = (BODYWEIGHT_STAPLES[g] ?? []).map((id) => bySource.get(id)).find((e): e is Exercise => !!e && !picked.includes(e))
+      if (next) picked.push(next)
+    }
+  }
+  if (!picked.length) return null
+  return picked.map((e) => ({ exercise_id: e.id, sets: 3, rep_min: 10, rep_max: 20, is_main_lift: false, rest_seconds: 60 }))
 }
 
 const mainCount = (s: { exercises: PlanExercise[] }) => s.exercises.filter((e) => e.is_main_lift).length
@@ -126,8 +160,14 @@ export function planWeek(days: DayInput[], template: TemplateDay[], catalog: Exe
     const d = input.get(p.date)!
     if (!p.session || d.past) continue
 
-    // 3. Away: swap what isn't there for the best alternative; drop what has none.
-    if (d.status === 'away' || d.equipment) {
+    // 3a. Away with no gym: a bodyweight workout for the same muscles, plus a short run or walk.
+    const noGym = !!d.equipment && d.equipment.every((x) => x === 'body only')
+    const bodyweight = noGym ? bodyweightSession(p.session.exercises, catalog) : null
+    if (bodyweight) {
+      p.session = { name: `${p.session.name} (bodyweight)`, templateDayId: p.session.templateDayId, exercises: bodyweight }
+      p.notes.push(`No gym: ${names(bodyweight, byId)}, 3 × 10–20 each (plank: seconds). Then a 15–20 min run or brisk walk; log it under Cardio.`)
+    } else if (d.status === 'away' || d.equipment) {
+      // 3b. Away at another gym: swap what isn't there for the best alternative; drop what has none.
       const swapped: string[] = []
       const dropped: string[] = []
       const kept: PlanExercise[] = []

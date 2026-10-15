@@ -24,3 +24,17 @@ export const STAPLE_SOURCE_IDS = new Set(
 
 /** Unusual or higher-risk variations (several are hard on shoulders). Still searchable, never suggested first. */
 export const DISCOURAGED_NAME = /guillotine|behind the neck|behind-the-neck|kipping|muscle up|rope climb|bradford|rocky|with chains|anti-gravity|car drivers/i
+
+/**
+ * No-equipment workouts (Plan my week → Away → No gym). Everyday moves only, by muscle group, best first.
+ * Data, not logic: free-exercise-db source ids. Chair dips and table rows need only furniture.
+ */
+export const BODYWEIGHT_STAPLES: Record<string, string[]> = {
+  Chest: ['Pushups', 'Push-Up_Wide', 'Decline_Push-Up'],
+  Shoulders: ['Decline_Push-Up', 'Push_Up_to_Side_Plank'],
+  Arms: ['Bench_Dips', 'Push-Ups_-_Close_Triceps_Position'],
+  Back: ['Inverted_Row'],
+  Legs: ['Bodyweight_Squat', 'Bodyweight_Walking_Lunge', 'Butt_Lift_Bridge', 'Single_Leg_Glute_Bridge'],
+  Core: ['Plank', 'Reverse_Crunch', 'Crunches'],
+  Conditioning: ['Mountain_Climbers', 'Freehand_Jump_Squat'],
+}

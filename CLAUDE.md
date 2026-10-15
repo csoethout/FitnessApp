@@ -119,8 +119,11 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   the active template + settings + workouts logged (a workout started that local date = done); `week_plan_exercises`
   is unused. Rules: busy days and past sessions with no workout move to free rest days (most main lifts first,
   nearest day, later on a tie); no free day → main lifts (or first 2 exercises) merge into the shortest training
-  day ahead, max one merge per day; away = that gym's equipment or bodyweight ('body only'), swaps via
-  rankAlternatives, nothing left → "Run or walk"; short = drop non-main lifts from the end, then sets (min 2).
+  day ahead, max one merge per day; away at another gym = swaps via rankAlternatives, nothing left → "Run or
+  walk"; away with no gym (or a bodyweight-only gym) = a bodyweight workout (owner request; `bodyweightSession`):
+  5 everyday moves from `BODYWEIGHT_STAPLES` (src/lib/staples.ts, data) for the session's muscle groups (main lifts'
+  first, round-robin), topped up with legs/core/one conditioning move, 3 × 10–20, 60 s rest, + a 15–20 min run or
+  brisk walk note (log under Cardio); short = drop non-main lifts from the end, then sets (min 2).
   Time estimate = sets × (40 s + rest) + 1 min per exercise. Opening Plan my week for a week creates its rows (=
   opting in); from then the Today card follows the plan (with its notes) and starts workouts with the planned
   exercises and `week_plan_day_id`. Weeks without rows use the template as before. Day rows are never deleted

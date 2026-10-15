@@ -63,12 +63,32 @@ describe('plan my week', () => {
     expect(plan[1].notes[0]).toBe('Missed: Legs moved to Thu.')
   })
 
-  it('away with no gym: bodyweight swaps; nothing left → run', () => {
-    const plan = planWeek(week({ '2026-10-20': { status: 'away', equipment: ['body only'] }, '2026-10-21': { status: 'away', equipment: ['body only'] } }), template, catalog)
-    expect(sessionOn(plan, '2026-10-20')?.exercises.map((e) => e.exercise_id)).toEqual(['Pushup'])
-    expect(plan[2].notes.join(' ')).toContain('Pushup for Bench')
-    expect(plan[2].notes.join(' ')).toContain('Fly') // no bodyweight chest isolation besides Pushup (already used)
-    expect(sessionOn(plan, '2026-10-21')?.name).toBe('Run or walk')
+  it('away at a gym with only some equipment: swaps; nothing left → run', () => {
+    const dumbbellsOnly = { status: 'away' as const, equipment: ['dumbbell'] }
+    const plan = planWeek(week({ '2026-10-20': dumbbellsOnly }), template, catalog)
+    expect(sessionOn(plan, '2026-10-20')?.name).toBe('Run or walk') // no dumbbell chest move in this small catalog
+    const p2 = planWeek(week({ '2026-10-21': dumbbellsOnly }), template, catalog)
+    expect(sessionOn(p2, '2026-10-21')?.exercises.map((e) => e.exercise_id)).toEqual(['Curl'])
+  })
+
+  it('away with no gym: a bodyweight workout for the same muscles, then a run or walk', () => {
+    const bw = [
+      ...catalog,
+      { ...ex('Pushups', 'body only', 'chest'), source_id: 'Pushups' },
+      { ...ex('Dips', 'body only', 'triceps'), source_id: 'Bench_Dips' },
+      { ...ex('AirSquat', 'body only', 'quadriceps'), source_id: 'Bodyweight_Squat' },
+      { ...ex('Lunge2', 'body only', 'quadriceps'), source_id: 'Bodyweight_Walking_Lunge' },
+      { ...ex('Plank', 'body only', 'abdominals', 'isolation'), source_id: 'Plank' },
+      { ...ex('Climbers', 'body only', 'quadriceps'), source_id: 'Mountain_Climbers' },
+    ]
+    const plan = planWeek(week({ '2026-10-20': { status: 'away', equipment: ['body only'] }, '2026-10-19': { status: 'away', equipment: ['body only'] } }), template, bw)
+    const chest = sessionOn(plan, '2026-10-20')!
+    expect(chest.name).toBe('Chest (bodyweight)')
+    expect(chest.exercises.map((e) => e.exercise_id)).toEqual(['Pushups', 'AirSquat', 'Plank', 'Climbers', 'Lunge2'])
+    expect(chest.exercises[0]).toMatchObject({ sets: 3, rep_min: 10, rep_max: 20 })
+    expect(plan[2].notes.join(' ')).toContain('run or brisk walk')
+    // Legs day: legs first, a second legs move before anything else repeats.
+    expect(sessionOn(plan, '2026-10-19')!.exercises.map((e) => e.exercise_id)).toEqual(['AirSquat', 'Plank', 'Climbers', 'Lunge2'])
   })
 
   it('short days drop non-main lifts, then trim sets (not below 2)', () => {
