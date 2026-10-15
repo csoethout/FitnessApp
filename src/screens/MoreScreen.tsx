@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '@/auth/AuthProvider'
 import { useConfirm } from '@/components/ConfirmProvider'
-import { Placeholder } from '@/components/Placeholder'
+import { ExportCard } from '@/components/ExportCard'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { SyncStatusCard } from '@/components/SyncStatusCard'
 import { TestingTools } from '@/components/TestingTools'
@@ -56,7 +56,7 @@ export function MoreScreen() {
           <ChevronRight size={20} className="text-muted" aria-hidden />
         </Link>
         <WorkoutSettings />
-        <Placeholder phase={6}>Export all data as CSV</Placeholder>
+        <ExportCard />
         <TestingTools />
         <button
           type="button"

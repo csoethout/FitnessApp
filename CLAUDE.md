@@ -141,6 +141,11 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   tab screens; checks hourly) so an update never reloads mid-workout. Placeholder icon `public/icon.svg` rendered
   to PNGs (180 apple-touch, 192, 512, maskable 512) with Playwright; real branding in the UX pass. iOS takes the
   home-screen icon/name when you "Add to Home Screen": re-add to pick up a new icon.
+- CSV export (step 6.2, `src/data/export.ts`): More → Export all data → "Prepare export" builds a zip (fflate 0.8.3,
+  MIT) from the phone's IndexedDB after a sync attempt: readable CSVs (workouts, sets, body, food totals, cardio,
+  targets; lb, miles, local dates) + `raw/<table>.csv` for every synced table (shared exercise library and deleted
+  rows left out) + README. Second tap "Save or share" uses the share sheet (iOS needs a fresh tap for it) or a
+  download. CSV cells are RFC 4180 and formula-defused (`src/lib/csv.ts`).
 - Sync: one IndexedDB per user (`liftlog-<uid>`), deleted on sign-out (after warning about unsynced changes).
   Server owns `updated_at`; pull uses keyset (updated_at, id); rows with pending local edits are never overwritten;
   server-rejected rows are marked failed (shown in More) instead of blocking the queue. Syncs on write (debounced),
@@ -292,10 +297,11 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         the plan; `week_plans`/`week_plan_days` synced (Dexie v5)
   - [x] 5.4 Gyms (equipment profiles for Away days), cardio logging (Today card), settings (rest timer / effort toggles)
   - [ ] Owner: test Phase 5 on iPhone
-- [ ] **Phase 6: PWA install, offline sync, CSV export**
+- [x] **Phase 6: PWA install, offline sync, CSV export** (built 2026-10-15)
   - [x] 6.1 Installable app + offline app shell (manifest, icons, service worker, update banner); E2E: opens
         offline incl. deep links, offline writes upload after reconnect, update banner → Reload
-  - [ ] 6.2 CSV export of all data
+  - [x] 6.2 CSV export of all data (zip of readable + raw CSVs, share sheet / download)
+  - [ ] Owner: re-add the app to the Home Screen (new icon), test offline + export on iPhone
 - [ ] **UX pass** (after Phase 6, owner agreed): navigation/layout, look (colors, type, spacing), name + icon,
       first-run and empty states, wording. Work through "UX notes" below.
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**
