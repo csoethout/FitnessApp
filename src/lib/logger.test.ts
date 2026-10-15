@@ -1,30 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { cascadeIds, currentSetIndex, formatElapsed, formatLastTime, formatWeight, prefillSets, type SetLike } from './logger'
+import { cascadeIds, currentSetIndex, formatElapsed, formatLastTime, formatWeight, type SetLike } from './logger'
 import { toStoredKg } from './units'
 
 const lb = (w: number) => toStoredKg(w, 'lb')
 const set = (position: number, w: number, reps: number, extra: Partial<SetLike> = {}): SetLike => ({
   position, weight_kg: lb(w), reps, set_type: 'working', completed_at: '2026-10-13T10:00:00Z', ...extra,
-})
-
-describe('prefillSets', () => {
-  it('repeats last session set by set, ignoring warm-ups and unfinished sets', () => {
-    const last = [set(0, 45, 10, { set_type: 'warmup' }), set(1, 185, 8), set(2, 185, 7), set(3, 185, 6, { completed_at: null })]
-    expect(prefillSets(3, last, 6).map((s) => [Math.round(s.weight_kg / 0.45359237), s.reps])).toEqual([
-      [185, 8],
-      [185, 7],
-      [185, 7],
-    ])
-  })
-  it('keeps limited (couldn\'t finish) sets as a reference', () => {
-    expect(prefillSets(1, [set(0, 50, 5, { set_type: 'limited' })], 8)[0].reps).toBe(5)
-  })
-  it('starts at weight 0 and the bottom of the rep range with no history', () => {
-    expect(prefillSets(2, [], 6)).toEqual([
-      { weight_kg: 0, reps: 6 },
-      { weight_kg: 0, reps: 6 },
-    ])
-  })
 })
 
 describe('formatting', () => {

@@ -107,7 +107,13 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   Phase 6 still adds offline app shell (service worker), install, CSV export.
 - Only one workout can be in progress; starting another offers to resume it. Finishing removes sets never done
   and exercises with no completed sets.
-- Phase 2 pre-fills sets from the last session (same exercise, any day); automatic progression targets arrive with the Phase 5 planner.
+- Set pre-fill = double progression (`src/lib/progression.ts`, step 5.1) on the last 2 sessions of the exercise (any
+  day): all working sets at top of range → +5 lb (+10 lb barbell lower body: barbell + leg/glute/lower-back primary
+  muscle; kg: 2.5/5), reps back to bottom; under the bottom twice in a row → −10% (rounded to 5 lb); else same
+  weights, +1 rep per set (capped at the top); bodyweight (0 lb) → +1 rep, no cap; warm-ups and limited sets ignored.
+  Rep range = the plan row for the exercise (the started day's row first), else 6–10 compound / 10–15 isolation.
+  The logger shows the range and a one-line reason; nothing is stored. Ramp-in weeks not implemented (owner is
+  already training; revisit if needed). Units are lb until the settings step (WEIGHT_UNIT in `src/data/workouts.ts`).
 - Sync: one IndexedDB per user (`liftlog-<uid>`), deleted on sign-out (after warning about unsynced changes).
   Server owns `updated_at`; pull uses keyset (updated_at, id); rows with pending local edits are never overwritten;
   server-rejected rows are marked failed (shown in More) instead of blocking the queue. Syncs on write (debounced),
@@ -200,7 +206,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] 3.3 Lift detail `/progress/exercise/:id` (lazy-loaded Recharts): trend line, metric chips, best-ever, sessions
   - [x] Owner: test Phase 3 on iPhone
   - [x] Warm-ups reduced to 1–2 sets (owner request); More → Testing tools (sample workouts / delete all workouts)
-- [ ] **Phase 4: body weight (+ body fat %, muscle mass) and food/macro tracking**
+- [x] **Phase 4: body weight (+ body fat %, muscle mass) and food/macro tracking** (done 2026-10-16)
   - [x] Owner: approved design (direct USDA/OFF calls from the app, USDA key in frontend; no Edge Function)
   - [x] 4.1 Weigh-ins: Today card + sheet (weight / body fat % / muscle mass, each prefilled from its own latest
         value), Progress → Body (dots + 7-day avg on a real time axis, weekly rate, 30/90/all, edit list, other day);
@@ -245,6 +251,11 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         `/food/meals/:id`: name, servings it makes, items (amount sheet, remove), Add food = AddFoodSheet `pickOnly`
         mode (same Recent/Search/Scan/Label; same food twice merges), delete (logged days keep their entries)
 - [ ] **Phase 5: rules-based planner, Plan my week, equipment profiles, cardio logging**
+  - [x] 5.1 Progression targets: double progression pre-fills each exercise; logger shows rep range + reason
+        (↑ green weight increase, ↓ amber deload)
+  - [ ] 5.2 Biweekly calorie check-in (weight trend vs goal rate → ±100–150 kcal within guardrails)
+  - [ ] 5.3 Plan my week (per-day normal / short / busy / away; move, merge, shorten, swap)
+  - [ ] 5.4 Equipment profiles, cardio logging, settings (units, timer/RIR toggles)
 - [ ] **Phase 6: PWA install, offline sync, CSV export**
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**
 

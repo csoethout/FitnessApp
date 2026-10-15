@@ -18,8 +18,8 @@ async function setsOf(workoutId: string) {
 }
 
 describe('workout flow', () => {
-  it('starts with planned sets, finishes, and pre-fills the next session from it', async () => {
-    const first = await startWorkout(store, 'Legs', [{ exercise_id: 'squat', sets: 3, rep_min: 6 }])
+  it('starts with planned sets, finishes, and pre-fills the next session by the progression rules', async () => {
+    const first = await startWorkout(store, 'Legs', [{ exercise_id: 'squat', sets: 3, rep_min: 6, rep_max: 10 }])
     expect(await activeWorkout(store.db)).toMatchObject({ id: first, name: 'Legs' })
 
     const planned = await setsOf(first)
@@ -33,12 +33,13 @@ describe('workout flow', () => {
     expect(await activeWorkout(store.db)).toBeNull()
     expect((await setsOf(first)).length).toBe(2) // unfinished set removed
 
-    const second = await startWorkout(store, 'Legs', [{ exercise_id: 'squat', sets: 3, rep_min: 6 }])
+    // Not at the top of 6–10 yet → same weight, one more rep per set (the extra set copies the last one).
+    const second = await startWorkout(store, 'Legs', [{ exercise_id: 'squat', sets: 3, rep_min: 6, rep_max: 10 }])
     const prefilled = await setsOf(second)
     expect(prefilled.map((s) => [s.weight_kg, s.reps])).toEqual([
+      [83.9146, 9],
       [83.9146, 8],
-      [83.9146, 7],
-      [83.9146, 7],
+      [83.9146, 8],
     ])
   })
 

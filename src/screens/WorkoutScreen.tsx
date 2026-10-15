@@ -15,7 +15,7 @@ import { addExercise, addSet, addWarmups, discardWorkout, finishWorkout } from '
 import { cascadeIds, currentSetIndex, formatElapsed, formatLastTime, formatWeight } from '@/lib/logger'
 import { unlockAudio } from '@/lib/beep'
 import { restTimer } from '@/lib/restTimer'
-import { defaultRepRange, restAfterSet } from '@/lib/training'
+import { restAfterSet } from '@/lib/training'
 import { useWakeLock } from '@/lib/useWakeLock'
 import { warmupPlan } from '@/lib/warmup'
 import { displayWeight, toStoredKg, type WeightUnit } from '@/lib/units'
@@ -229,7 +229,7 @@ export function WorkoutScreen() {
           onClose={() => setPicking(false)}
           onPick={(e) => {
             setPicking(false)
-            void addExercise(store, workout.id, { exercise_id: e.id, sets: 3, rep_min: defaultRepRange(e.mechanic)[0] }, items.length)
+            void addExercise(store, workout.id, { exercise_id: e.id, sets: 3 }, items.length)
           }}
         />
       )}
@@ -259,7 +259,14 @@ function ExerciseCard(props: {
       <div className="flex items-start gap-1 pl-4 pr-1 pt-2">
         <div className="min-w-0 flex-1 pt-1">
           <h2 className="font-semibold">{item.exercise?.name ?? 'Unknown exercise'}</h2>
-          <p className="text-sm text-muted">{lastTime ? `Last time: ${lastTime}` : 'First time: pick a starting weight'}</p>
+          <p className="text-sm text-muted">
+            {lastTime ? `Last time: ${lastTime} · ` : ''}
+            {item.repMin}–{item.repMax} reps
+          </p>
+          <p className={`text-sm ${item.suggestion.kind === 'increase' ? 'text-accent' : item.suggestion.kind === 'deload' ? 'text-amber-400' : 'text-muted'}`}>
+            {item.suggestion.kind === 'increase' ? '↑ ' : item.suggestion.kind === 'deload' ? '↓ ' : ''}
+            {item.suggestion.reason}
+          </p>
         </div>
         <button type="button" onClick={onSwap} className="flex min-h-12 items-center gap-1 rounded-xl px-2 text-sm text-muted">
           <ArrowLeftRight size={18} /> Swap

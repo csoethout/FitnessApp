@@ -1,7 +1,6 @@
-import { defaultRepRange } from '@/lib/training'
 import type { LocalStore } from './store'
 import type { Exercise, WorkoutExercise } from './types'
-import { addExercise } from './workouts'
+import { addExercise, addExerciseTables } from './workouts'
 
 const live = <T extends { deleted_at: string | null }>(rows: T[]) => rows.filter((r) => !r.deleted_at)
 
@@ -13,7 +12,7 @@ const live = <T extends { deleted_at: string | null }>(rows: T[]) => rows.filter
  */
 export async function swapInWorkout(store: LocalStore, we: WorkoutExercise, next: Exercise) {
   const { db } = store
-  await db.transaction('rw', [db.workout_exercises, db.sets, db.workouts, db.outbox], async () => {
+  await db.transaction('rw', addExerciseTables(db), async () => {
     const sets = live(await db.sets.where('workout_exercise_id').equals(we.id).toArray())
     const pending = sets.filter((s) => !s.completed_at && s.set_type !== 'warmup')
     for (const s of sets.filter((s) => !s.completed_at)) await store.remove('sets', s.id)
@@ -32,7 +31,7 @@ export async function swapInWorkout(store: LocalStore, we: WorkoutExercise, next
     const added = await addExercise(
       store,
       we.workout_id,
-      { exercise_id: next.id, sets: Math.max(1, pending.length || 3), rep_min: defaultRepRange(next.mechanic)[0] },
+      { exercise_id: next.id, sets: Math.max(1, pending.length || 3) },
       position,
     )
     await store.update('workout_exercises', added.id, { swapped_from_exercise_id: we.exercise_id })

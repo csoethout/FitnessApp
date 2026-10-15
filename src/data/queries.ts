@@ -1,8 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useData } from './DataProvider'
 import type { Exercise, PlanTemplateDay, PlanTemplateExercise, WorkoutExercise, WorkoutSet } from './types'
-import { defaultRestSeconds } from '@/lib/training'
-import { activeWorkout, lastPerformance } from './workouts'
+import type { Suggestion } from '@/lib/progression'
+import { activeWorkout, lastPerformance, planFor, suggestionFor } from './workouts'
 
 const live = <T extends { deleted_at: string | null }>(rows: T[]) => rows.filter((r) => !r.deleted_at)
 
@@ -51,6 +51,9 @@ export type WorkoutItem = {
   last: WorkoutSet[]
   isMainLift: boolean // from the weekly plan, if the exercise is in it
   restSeconds: number
+  repMin: number
+  repMax: number
+  suggestion: Suggestion // why today's sets were pre-filled the way they were
 }
 
 /** A workout with its exercises (ordered), their sets (ordered), and what was done last time. */
@@ -62,19 +65,16 @@ export function useWorkout(workoutId: string | undefined) {
     if (!workout || workout.deleted_at) return null
     const wes = live(await db.workout_exercises.where('workout_id').equals(workoutId).toArray()).sort((a, b) => a.position - b.position)
     const exercises = await db.exercises.bulkGet(wes.map((we) => we.exercise_id))
-    // Main-lift flag and rest come from the weekly plan (any day that has the exercise).
-    const template = live(await db.plan_templates.toArray()).find((t) => t.is_active)
-    const dayIds = template ? (await db.plan_template_days.where('template_id').equals(template.id).primaryKeys()) : []
-    const planRows = dayIds.length ? live(await db.plan_template_exercises.where('template_day_id').anyOf(dayIds).toArray()) : []
+    // Main-lift flag, rest and rep range come from the weekly plan (any day that has the exercise).
     const items: WorkoutItem[] = []
     for (const [i, we] of wes.entries()) {
       const sets = live(await db.sets.where('workout_exercise_id').equals(we.id).toArray()).sort((a, b) => a.position - b.position)
-      const rows = planRows.filter((r) => r.exercise_id === we.exercise_id)
-      const isMainLift = rows.some((r) => r.is_main_lift)
-      const restSeconds =
-        rows.find((r) => r.rest_seconds !== null)?.rest_seconds ?? defaultRestSeconds(isMainLift, exercises[i]?.mechanic ?? null)
+      const plan = await planFor(db, exercises[i])
+      const working = sets.filter((x) => x.set_type !== 'warmup').length || 3
       items.push({
-        we, exercise: exercises[i], sets, last: await lastPerformance(db, we.exercise_id, workoutId), isMainLift, restSeconds,
+        we, exercise: exercises[i], sets, last: await lastPerformance(db, we.exercise_id, workoutId),
+        isMainLift: plan.isMainLift, restSeconds: plan.restSeconds, repMin: plan.repMin, repMax: plan.repMax,
+        suggestion: await suggestionFor(db, exercises[i], we.exercise_id, working, plan, workoutId),
       })
     }
     return { workout, items }

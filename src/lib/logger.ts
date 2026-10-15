@@ -2,22 +2,6 @@ import type { SetType } from '@/data/types'
 import { displayWeight, type WeightUnit } from './units'
 
 export type SetLike = { weight_kg: number; reps: number; set_type: SetType; completed_at: string | null; position: number }
-export type PlannedSet = { weight_kg: number; reps: number }
-
-/**
- * Phase 2 pre-fill: repeat what you did last time, set by set (warm-ups ignored).
- * Extra sets copy the last one. With no history: empty bar weight 0 and the bottom of the rep range.
- * (Automatic weight increases arrive with the Phase 5 planner.)
- */
-export function prefillSets(count: number, lastSets: SetLike[], repMin: number): PlannedSet[] {
-  const done = lastSets
-    .filter((s) => s.completed_at && s.set_type !== 'warmup')
-    .sort((a, b) => a.position - b.position)
-  return Array.from({ length: count }, (_, i) => {
-    const src = done[i] ?? done[done.length - 1]
-    return src ? { weight_kg: src.weight_kg, reps: src.reps } : { weight_kg: 0, reps: repMin }
-  })
-}
 
 /** "185×8 · 185×8 · 185×7" — completed sets from last time, warm-ups left out. */
 export function formatLastTime(lastSets: SetLike[], unit: WeightUnit): string | null {
