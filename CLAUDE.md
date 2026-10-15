@@ -233,7 +233,12 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         (`src/lib/barcode.ts`). Lookup (`lookupBarcode`): your foods → USDA branded (exact gtinUpc match) → Open Food
         Facts product API; quiet retries. Not found → Label tab with the barcode saved on the food, so the next scan
         finds it locally. Type-the-number fallback with check-digit validation. E2E with a fake camera (.y4m)
-  - [ ] 4.5 Saved meals / recipes
+  - [x] 4.5 Saved meals / recipes (`src/data/meals.ts`, maths in `src/lib/meals.ts`): a meal = foods + amounts;
+        "Servings it makes" > 1 = recipe (1 serving = batch ÷ N). Logged as ONE entry (name = meal, saved_meal_id,
+        per-serving snapshot incl. optional nutrients); excluded from Recent foods (listed under Saved meals instead).
+        Create: "Save as meal" under a meal on the Food day (quick adds left out) or Food → 🍴 → New meal. Editor
+        `/food/meals/:id`: name, servings it makes, items (amount sheet, remove), Add food = AddFoodSheet `pickOnly`
+        mode (same Recent/Search/Scan/Label; same food twice merges), delete (logged days keep their entries)
 - [ ] **Phase 5: rules-based planner, Plan my week, equipment profiles, cardio logging**
 - [ ] **Phase 6: PWA install, offline sync, CSV export**
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**

@@ -1,8 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ScanBarcode, Search, X } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { useData } from '@/data/DataProvider'
 import { createCustomFood, logFood, logQuickAdd, lookupBarcode, MEAL_SLOTS, recentFoods, saveFoundFood, type RecentItem } from '@/data/food'
+import { logSavedMeal, useSavedMeals, type MealView } from '@/data/meals'
 import { searchUsda, usingDemoKey } from '@/data/foodApi'
 import { matchesQuery, servingLabel, type FoundFood } from '@/lib/foodSearch'
 import type { Food, MealSlot } from '@/data/types'
@@ -19,14 +21,18 @@ type Scan = { step: 'camera' } | { step: 'looking' | 'notfound' | 'offline'; cod
 // The scanner and its ~1 MB reader load only when you tap Scan.
 const BarcodeScanner = lazy(() => import('./BarcodeScanner').then((m) => ({ default: m.BarcodeScanner })))
 
+/** Pick mode: choose a food for something else (a saved meal) instead of logging it. */
+export type PickOnly = { title: string; onAdd: (food: Food, servings: number) => Promise<unknown> }
+
 /**
- * Add food to a meal. Opens on Recent (you eat the same things a lot), then Search (your foods + USDA), Label (type
+ * Add food to a meal. Opens on Recent (saved meals + foods you eat a lot), then Search (your foods + USDA), Label (type
  * the nutrition panel) and Quick add (just the numbers). Scan (header button) looks a barcode up in your foods, USDA,
- * then Open Food Facts. Calories and macros must agree (4/4/9 kcal per g). Saved meals arrive in step 4.5.
+ * then Open Food Facts. Calories and macros must agree (4/4/9 kcal per g).
+ * With `pickOnly` the same tools pick a food for a saved meal (no meal chips, no quick add, no saved meals).
  */
-export function AddFoodSheet(props: { date: string; slot: MealSlot; onClose: () => void }) {
-  const { date, onClose } = props
-  const [slot, setSlot] = useState<MealSlot>(props.slot)
+export function AddFoodSheet(props: { date: string; slot?: MealSlot; onClose: () => void; pickOnly?: PickOnly }) {
+  const { date, onClose, pickOnly } = props
+  const [slot, setSlot] = useState<MealSlot>(props.slot ?? 'snack')
   const [tab, setTab] = useState<Tab>('recent')
   const [picked, setPicked] = useState<Portion | null>(null)
   const [scan, setScan] = useState<Scan | null>(null)
@@ -39,14 +45,25 @@ export function AddFoodSheet(props: { date: string; slot: MealSlot; onClose: () 
     { key: 'recent', label: 'Recent' },
     { key: 'search', label: 'Search' },
     { key: 'label', label: 'Label' },
-    { key: 'quick', label: 'Quick add' },
+    ...(pickOnly ? [] : [{ key: 'quick' as const, label: 'Quick add' }]),
   ]
+
+  /** Where a chosen food goes: today's log, or the saved meal being edited. */
+  const addFood = (food: Food, servings: number) => (pickOnly ? pickOnly.onAdd(food, servings) : logFood(store, date, slot, food, servings))
+
+  function pickMeal(m: MealView) {
+    setPicked({
+      title: m.meal.name, kcal: m.per.kcal, protein_g: m.per.protein_g, carbs_g: m.per.carbs_g, fat_g: m.per.fat_g, food: null, startServings: 1,
+      subtitle: m.meal.servings_yield > 1 ? `Recipe · 1 serving = 1/${m.meal.servings_yield} of the batch` : `Saved meal · ${m.items.length} food${m.items.length === 1 ? '' : 's'}`,
+      add: (portions) => logSavedMeal(store, date, slot, m, portions),
+    })
+  }
 
   function pickRecent(r: RecentItem) {
     setPicked({
       title: r.name, kcal: r.kcal, protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g, food: r.food, startServings: r.lastServings || 1,
       add: async (servings) => {
-        if (r.food) await logFood(store, date, slot, r.food, servings)
+        if (r.food) await addFood(r.food, servings)
         else await logQuickAdd(store, date, slot, { name: r.name, kcal: r.kcal * servings, protein_g: r.protein_g * servings, carbs_g: r.carbs_g * servings, fat_g: r.fat_g * servings })
       },
     })
@@ -55,14 +72,14 @@ export function AddFoodSheet(props: { date: string; slot: MealSlot; onClose: () 
   function pickFound(f: FoundFood) {
     setPicked({
       title: f.brand ? `${f.name} (${f.brand})` : f.name, kcal: f.kcal, protein_g: f.protein_g, carbs_g: f.carbs_g, fat_g: f.fat_g, food: f, startServings: 1,
-      add: async (servings) => logFood(store, date, slot, await saveFoundFood(store, f), servings).then(() => undefined),
+      add: async (servings) => addFood(await saveFoundFood(store, f), servings),
     })
   }
 
   function pickMine(food: Food) {
     setPicked({
       title: food.brand ? `${food.name} (${food.brand})` : food.name, kcal: food.kcal, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g,
-      food, startServings: 1, add: (servings) => logFood(store, date, slot, food, servings),
+      food, startServings: 1, add: (servings) => addFood(food, servings),
     })
   }
 
@@ -91,7 +108,7 @@ export function AddFoodSheet(props: { date: string; slot: MealSlot; onClose: () 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-bg pt-[env(safe-area-inset-top)]">
       <div className="flex items-center gap-2 px-4 pt-3">
-        <h2 className="flex-1 text-xl font-semibold">Add food</h2>
+        <h2 className="min-w-0 flex-1 truncate text-xl font-semibold">{pickOnly?.title ?? 'Add food'}</h2>
         <button type="button" onClick={() => setScan({ step: 'camera' })} className="flex min-h-12 items-center gap-2 rounded-xl border border-border px-3">
           <ScanBarcode size={20} /> Scan
         </button>
@@ -99,7 +116,7 @@ export function AddFoodSheet(props: { date: string; slot: MealSlot; onClose: () 
           <X />
         </button>
       </div>
-      <div className="flex gap-2 overflow-x-auto px-4 py-2" aria-label="Meal">
+      <div className={`flex gap-2 overflow-x-auto px-4 py-2 ${pickOnly ? 'hidden' : ''}`} aria-label="Meal">
         {MEAL_SLOTS.map((m) => (
           <button
             key={m.slot}
@@ -112,7 +129,7 @@ export function AddFoodSheet(props: { date: string; slot: MealSlot; onClose: () 
           </button>
         ))}
       </div>
-      <div role="tablist" className="mx-4 grid grid-cols-4 rounded-xl bg-surface p-1">
+      <div role="tablist" className={`mx-4 grid rounded-xl bg-surface p-1 ${pickOnly ? 'mt-2 grid-cols-3' : 'grid-cols-4'}`}>
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -126,9 +143,18 @@ export function AddFoodSheet(props: { date: string; slot: MealSlot; onClose: () 
         ))}
       </div>
       <div className="flex-1 overflow-y-auto px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        {tab === 'recent' && <RecentTab date={date} onPick={pickRecent} onEmpty={() => setTab('search')} />}
-        {tab === 'search' && <SearchTab date={date} onPick={pickFound} onPickMine={pickRecent} onLabel={() => setTab('label')} />}
-        {tab === 'label' && <LabelTab key={labelBarcode ?? ''} date={date} slot={slot} barcode={labelBarcode} onDone={onClose} />}
+        {tab === 'recent' && <RecentTab date={date} foodsOnly={!!pickOnly} onPick={pickRecent} onPickMeal={pickMeal} onEmpty={() => setTab('search')} />}
+        {tab === 'search' && <SearchTab date={date} foodsOnly={!!pickOnly} onPick={pickFound} onPickMine={pickRecent} onLabel={() => setTab('label')} />}
+        {tab === 'label' && (
+          <LabelTab
+            key={labelBarcode ?? ''}
+            barcode={labelBarcode}
+            onSaved={async (food, servings) => {
+              await addFood(food, servings)
+              onClose()
+            }}
+          />
+        )}
         {tab === 'quick' && <QuickTab date={date} slot={slot} onDone={onClose} />}
       </div>
       {picked && <PortionSheet portion={picked} onCancel={() => setPicked(null)} onDone={onClose} />}
@@ -192,11 +218,15 @@ function ScanResult(props: { scan: Exclude<Scan, { step: 'camera' }>; onCancel: 
   )
 }
 
-function RecentTab({ date, onPick, onEmpty }: { date: string; onPick: (r: RecentItem) => void; onEmpty: () => void }) {
+function RecentTab(props: { date: string; foodsOnly: boolean; onPick: (r: RecentItem) => void; onPickMeal: (m: MealView) => void; onEmpty: () => void }) {
+  const { date, foodsOnly, onPick, onPickMeal, onEmpty } = props
   const { db } = useData()
-  const items = useLiveQuery(() => recentFoods(db, date), [db, date])
-  if (!items) return null
-  if (!items.length) {
+  const all = useLiveQuery(() => recentFoods(db, date), [db, date])
+  const meals = useSavedMeals()
+  if (!all || !meals) return null
+  const items = foodsOnly ? all.filter((r) => r.food) : all
+  const savedMeals = foodsOnly ? [] : meals.filter((m) => m.items.length > 0)
+  if (!items.length && !savedMeals.length) {
     return (
       <div className="py-10 text-center text-muted">
         <p>Foods you log will show up here for one-tap adding.</p>
@@ -207,21 +237,48 @@ function RecentTab({ date, onPick, onEmpty }: { date: string; onPick: (r: Recent
     )
   }
   return (
-    <ul>
-      {items.map((r) => (
-        <li key={r.key}>
-          <button type="button" onClick={() => onPick(r)} className="flex min-h-14 w-full items-center gap-3 border-b border-border py-2 text-left">
-            <span className="min-w-0 flex-1">
-              <span className="block truncate">{r.name}</span>
-              <span className="block text-xs text-muted">
-                {r.food ? servingLabel(r.food) : 'Quick add'} · {Math.round(r.kcal)} kcal · {Math.round(r.protein_g)} g protein
+    <>
+      {savedMeals.length > 0 && (
+        <>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-muted uppercase">Saved meals</p>
+            <Link to="/food/meals" className="flex min-h-10 items-center px-2 text-sm text-accent">
+              Edit
+            </Link>
+          </div>
+          <ul className="mb-3">
+            {savedMeals.map((m) => (
+              <li key={m.meal.id}>
+                <button type="button" onClick={() => onPickMeal(m)} className="flex min-h-14 w-full items-center gap-3 border-b border-border py-2 text-left">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{m.meal.name}</span>
+                    <span className="block text-xs text-muted">
+                      {m.meal.servings_yield > 1 ? `Recipe, per serving` : `${m.items.length} food${m.items.length === 1 ? '' : 's'}`} · {m.per.kcal} kcal · {Math.round(m.per.protein_g)} g protein
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {items.length > 0 && <p className="text-xs font-semibold text-muted uppercase">Recent</p>}
+        </>
+      )}
+      <ul>
+        {items.map((r) => (
+          <li key={r.key}>
+            <button type="button" onClick={() => onPick(r)} className="flex min-h-14 w-full items-center gap-3 border-b border-border py-2 text-left">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">{r.name}</span>
+                <span className="block text-xs text-muted">
+                  {r.food ? servingLabel(r.food) : 'Quick add'} · {Math.round(r.kcal)} kcal · {Math.round(r.protein_g)} g protein
+                </span>
               </span>
-            </span>
-            <span className="text-xs text-muted">×{r.count}</span>
-          </button>
-        </li>
-      ))}
-    </ul>
+              <span className="text-xs text-muted">×{r.count}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </>
   )
 }
 
@@ -231,7 +288,8 @@ type Portion = {
   protein_g: number
   carbs_g: number
   fat_g: number
-  food: { serving_amount: number; serving_unit: string; serving_grams: number | null } | null // null = quick add
+  food: { serving_amount: number; serving_unit: string; serving_grams: number | null } | null // null = quick add / saved meal
+  subtitle?: string // saved meals: portions picked with a stepper
   startServings: number
   add: (servings: number) => Promise<unknown>
 }
@@ -256,10 +314,10 @@ function PortionSheet({ portion: p, onCancel, onDone }: { portion: Portion; onCa
     <div className="fixed inset-0 z-[55] flex items-end bg-black/60" onClick={onCancel}>
       <div role="dialog" aria-label={p.title} onClick={(e) => e.stopPropagation()} className="w-full rounded-t-3xl border-t border-border bg-surface px-4 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <h3 className="text-lg font-semibold">{p.title}</h3>
-        <p className="text-sm text-muted">{p.food ? `1 serving = ${servingLabel(p.food)}` : 'Quick add'}</p>
-        {p.food && (
+        <p className="text-sm text-muted">{p.food ? `1 serving = ${servingLabel(p.food)}` : (p.subtitle ?? 'Quick add')}</p>
+        {(p.food || p.subtitle) && (
           <div className="mt-4">
-            <AmountPicker servings={servings} onChange={setServings} gramsPerServing={p.food.serving_grams} startInGrams={p.food.serving_unit === 'g'} />
+            <AmountPicker servings={servings} onChange={setServings} gramsPerServing={p.food?.serving_grams ?? null} startInGrams={p.food?.serving_unit === 'g'} />
           </div>
         )}
         <p className="mt-4 text-center text-sm">
@@ -282,8 +340,8 @@ const AUTO_DELAY_MS = 500
  * searched when you pause typing, or on Search. With the shared DEMO_KEY only on Search (30 requests an hour).
  * Open Food Facts text search was dropped: slow, often failing in Safari, and USDA covers US products.
  */
-function SearchTab(props: { date: string; onPick: (f: FoundFood) => void; onPickMine: (r: RecentItem) => void; onLabel: () => void }) {
-  const { date, onPick, onPickMine, onLabel } = props
+function SearchTab(props: { date: string; foodsOnly: boolean; onPick: (f: FoundFood) => void; onPickMine: (r: RecentItem) => void; onLabel: () => void }) {
+  const { date, foodsOnly, onPick, onPickMine, onLabel } = props
   const { db } = useData()
   const [query, setQuery] = useState('')
   const [res, setRes] = useState<SearchState>({ status: 'idle', query: '', items: [] })
@@ -292,7 +350,7 @@ function SearchTab(props: { date: string; onPick: (f: FoundFood) => void; onPick
   useEffect(() => () => ctrl.current?.abort(), [])
   const mineAll = useLiveQuery(() => recentFoods(db, date, 365, 500), [db, date])
   const q = query.trim()
-  const mine = q.length >= 2 ? (mineAll ?? []).filter((r) => matchesQuery(`${r.name} ${r.food?.brand ?? ''}`, q)).slice(0, 8) : []
+  const mine = q.length >= 2 ? (mineAll ?? []).filter((r) => (!foodsOnly || r.food) && matchesQuery(`${r.name} ${r.food?.brand ?? ''}`, q)).slice(0, 8) : []
 
   function search(text: string) {
     if (text.length < 2 || (text === res.query && res.status !== 'error')) return
@@ -409,8 +467,8 @@ function SearchTab(props: { date: string; onPick: (f: FoundFood) => void; onPick
   )
 }
 
-/** Type in a nutrition label. Saves it as your own food (shows in Recent next time), then logs it. */
-function LabelTab({ date, slot, barcode, onDone }: { date: string; slot: MealSlot; barcode: string | null; onDone: () => void }) {
+/** Type in a nutrition label. Saves it as your own food (shows in Recent next time), then adds it. */
+function LabelTab({ barcode, onSaved }: { barcode: string | null; onSaved: (food: Food, servings: number) => Promise<void> }) {
   const { store } = useData()
   const [name, setName] = useState('')
   const [brand, setBrand] = useState('')
@@ -429,8 +487,7 @@ function LabelTab({ date, slot, barcode, onDone }: { date: string; slot: MealSlo
       serving_grams: grams, kcal: effectiveKcal(macros) ?? 0, protein_g: macros.protein ?? 0, carbs_g: macros.carbs ?? 0, fat_g: macros.fat ?? 0,
       barcode, ...extraCols,
     })
-    await logFood(store, date, slot, food, servings)
-    onDone()
+    await onSaved(food, servings)
   }
 
   const text = 'h-12 w-full rounded-xl border border-border bg-surface-2 px-3 text-base outline-none focus:border-accent'

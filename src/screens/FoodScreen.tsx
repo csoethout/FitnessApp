@@ -1,13 +1,15 @@
-import { ChevronLeft, ChevronRight, Copy, Plus, Target } from 'lucide-react'
+import { BookmarkPlus, ChevronLeft, ChevronRight, Copy, Plus, Target, UtensilsCrossed } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AddFoodSheet } from '@/components/AddFoodSheet'
 import { EntrySheet } from '@/components/EntrySheet'
 import { MacroBars } from '@/components/MacroBars'
+import { Sheet } from '@/components/Sheet'
 import { useData } from '@/data/DataProvider'
 import { copyEntries, MEAL_SLOTS } from '@/data/food'
 import { useDayLog, useTargetOn } from '@/data/foodHooks'
+import { saveEntriesAsMeal } from '@/data/meals'
 import type { FoodLogEntry, MealSlot } from '@/data/types'
 import { localDateKey } from '@/lib/body'
 import { formatDay } from '@/lib/dates'
@@ -29,6 +31,7 @@ export function FoodScreen() {
   const target = useTargetOn(date)
   const [adding, setAdding] = useState<MealSlot | null>(null)
   const [editing, setEditing] = useState<FoodLogEntry | null>(null)
+  const [saving, setSaving] = useState<{ slot: MealSlot; label: string; list: FoodLogEntry[] } | null>(null)
 
   const totals = useMemo(() => sumMacros((entries ?? []).map(entryMacros)), [entries])
   const extras = useMemo(() => sumExtras(entries ?? []), [entries])
@@ -53,6 +56,9 @@ export function FoodScreen() {
         >
           <ChevronRight />
         </button>
+        <Link to="/food/meals" aria-label="Saved meals" className="grid size-12 place-items-center text-muted">
+          <UtensilsCrossed size={22} />
+        </Link>
         <Link to="/food/plan" aria-label="Your nutrition plan" className="grid size-12 place-items-center text-muted">
           <Target size={22} />
         </Link>
@@ -100,7 +106,7 @@ export function FoodScreen() {
                         <span className="min-w-0 flex-1">
                           <span className="block truncate">{e.name}</span>
                           <span className="block text-xs text-muted">
-                            {e.food_id ? `${amountLabel(e.servings, foods?.get(e.food_id))} · ` : ''}
+                            {e.food_id ? `${amountLabel(e.servings, foods?.get(e.food_id))} · ` : e.saved_meal_id ? `${amountLabel(e.servings, null)} · ` : ''}
                             {Math.round(m.protein_g)} g protein
                           </span>
                         </span>
@@ -114,6 +120,15 @@ export function FoodScreen() {
                 <button type="button" onClick={() => setAdding(slot)} className="flex min-h-12 flex-1 items-center justify-center gap-1 text-accent">
                   <Plus size={18} /> Add
                 </button>
+                {list.some((e) => e.food_id) && (
+                  <button
+                    type="button"
+                    onClick={() => setSaving({ slot, label: mealLabel, list })}
+                    className="flex min-h-12 flex-1 items-center justify-center gap-1 border-l border-border text-sm text-muted"
+                  >
+                    <BookmarkPlus size={16} /> Save as meal
+                  </button>
+                )}
                 {list.length === 0 && prevSlots.has(slot) && entries.length > 0 && (
                   <button
                     type="button"
@@ -132,6 +147,40 @@ export function FoodScreen() {
 
       {adding && <AddFoodSheet date={date} slot={adding} onClose={() => setAdding(null)} />}
       {editing && <EntrySheet entry={editing} onClose={() => setEditing(null)} />}
+      {saving && <SaveMealSheet label={saving.label} entries={saving.list} onClose={() => setSaving(null)} />}
     </>
+  )
+}
+
+/** Name a meal from the day and save it, so it's one tap under Add food → Recent next time. */
+function SaveMealSheet({ label, entries, onClose }: { label: string; entries: FoodLogEntry[]; onClose: () => void }) {
+  const { store } = useData()
+  const [name, setName] = useState(`My ${label.toLowerCase()}`)
+  const quick = entries.filter((e) => !e.food_id).length
+  return (
+    <Sheet title="Save as meal" onClose={onClose}>
+      <div className="space-y-3 pb-2">
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onFocus={(e) => e.target.select()}
+          aria-label="Meal name"
+          className="h-12 w-full rounded-xl border border-border bg-surface-2 px-3 text-base outline-none focus:border-accent"
+        />
+        <p className="text-sm text-muted">
+          {entries.length - quick} food{entries.length - quick === 1 ? '' : 's'} with these amounts.
+          {quick > 0 && ` Quick adds (${quick}) can't be part of a meal and are left out.`} Next time it's one tap under Add food → Recent.
+        </p>
+        <button
+          type="button"
+          disabled={!name.trim()}
+          onClick={() => void saveEntriesAsMeal(store, name.trim(), entries).then(onClose)}
+          className="min-h-14 w-full rounded-xl bg-accent text-lg font-semibold text-accent-ink disabled:opacity-40"
+        >
+          Save meal
+        </button>
+      </div>
+    </Sheet>
   )
 }

@@ -101,7 +101,7 @@ export type RecentItem = PerServing & { key: string; food: Food | null; lastServ
  * This is the default view when adding food: the owner eats the same things a lot.
  */
 export async function recentFoods(db: LocalDb, today: string, days = 45, limit = 30): Promise<RecentItem[]> {
-  const entries = live(await db.food_log_entries.toArray()).filter((e) => e.logged_on <= today && e.logged_on >= shift(today, -days))
+  const entries = live(await db.food_log_entries.toArray()).filter((e) => !e.saved_meal_id && e.logged_on <= today && e.logged_on >= shift(today, -days))
   const groups = new Map<string, FoodLogEntry[]>()
   for (const e of entries) {
     const key = e.food_id ?? `quick:${e.name}|${e.kcal_per_serving}`
