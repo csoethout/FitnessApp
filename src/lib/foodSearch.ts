@@ -114,20 +114,28 @@ export function fromUsda(f: UsdaFood): FoundFood | null {
 
 // ---------- Open Food Facts ----------
 
+// The newer search service may return names per language ({ en, main, … }) and brands as a list.
+type Text = string | Record<string, string | undefined>
 export type OffProduct = {
   code?: string
-  product_name?: string
+  product_name?: Text
   product_name_en?: string
-  brands?: string
+  brands?: string | string[]
   serving_size?: string
   serving_quantity?: number | string
   nutriments?: Record<string, number | string | undefined>
 }
 
+function pickText(t: Text | undefined): string {
+  if (!t) return ''
+  if (typeof t === 'string') return t
+  return t.en || t.main || Object.values(t).find((v) => !!v) || ''
+}
+
 /** One Open Food Facts product → FoundFood, or null when it has no name or calories. */
 export function fromOff(p: OffProduct): FoundFood | null {
   const n = p.nutriments ?? {}
-  const name = (p.product_name_en || p.product_name || '').trim()
+  const name = (p.product_name_en || pickText(p.product_name)).trim()
   const kj = num(n['energy_100g'])
   const kcal = num(n['energy-kcal_100g']) ?? (kj !== null ? kj / 4.184 : null)
   if (!name || !p.code || kcal === null) return null
@@ -143,7 +151,7 @@ export function fromOff(p: OffProduct): FoundFood | null {
   }
   const base = {
     source: 'off' as const, source_id: p.code, barcode: p.code, name: tidyName(name),
-    brand: p.brands?.split(',')[0]?.trim() || null, generic: false,
+    brand: (Array.isArray(p.brands) ? p.brands[0] : p.brands?.split(',')[0])?.trim() || null, generic: false,
   }
   const grams = num(p.serving_quantity)
   if (grams && grams > 0) {

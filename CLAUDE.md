@@ -218,11 +218,12 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         optional fiber, sugar, sat fat, trans fat, cholesterol, sodium on label entry; day totals under the meters
   - [ ] Owner: run `20261016000000_extra_nutrients.sql` in Supabase SQL Editor
   - [x] 4.3 Food search tab (search on submit, not per keystroke: rate limits): USDA whole foods (Foundation, SR
-        Legacy, Survey) first, then USDA branded, then Open Food Facts (US); duplicates by barcode dropped; parsing in
+        Legacy, Survey) first, then USDA branded. Open Food Facts text search dropped (owner OK'd: slow, "Load failed"
+        in Safari, USDA covers US brands); OFF is kept for barcode lookups only (4.4: USDA gtinUpc first, then OFF). Parsing in
         `src/lib/foodSearch.ts` (unit tested), fetches in `src/data/foodApi.ts` (falls back to USDA DEMO_KEY).
         Picking saves your own copy (`saveFoundFood`, re-used next time). Amount in servings or grams
         (`AmountPicker`, also when editing an entry); day list shows "225 g" for gram-measured foods
-  - [ ] 4.4 Barcode scanning
+  - [ ] 4.4 Barcode scanning (USDA by barcode first, Open Food Facts product lookup as fallback)
   - [ ] 4.5 Saved meals / recipes
 - [ ] **Phase 5: rules-based planner, Plan my week, equipment profiles, cardio logging**
 - [ ] **Phase 6: PWA install, offline sync, CSV export**

@@ -3,8 +3,8 @@ import { Search, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useData } from '@/data/DataProvider'
 import { createCustomFood, logFood, logQuickAdd, MEAL_SLOTS, recentFoods, saveFoundFood, type RecentItem } from '@/data/food'
-import { searchOff, searchUsda, usingDemoKey } from '@/data/foodApi'
-import { mergeResults, servingLabel, type FoundFood } from '@/lib/foodSearch'
+import { searchUsda, usingDemoKey } from '@/data/foodApi'
+import { servingLabel, type FoundFood } from '@/lib/foodSearch'
 import type { Food, MealSlot } from '@/data/types'
 import { effectiveKcal, EMPTY_MACROS, macrosValid, type MacroValues } from '@/lib/macroForm'
 import { EXTRA_NUTRIENTS, foodCol, type Extras } from '@/lib/nutrition'
@@ -177,14 +177,15 @@ function PortionSheet({ portion: p, onCancel, onDone }: { portion: Portion; onCa
   )
 }
 
-type SourceState = { status: 'idle' | 'loading' | 'done' | 'error'; items: FoundFood[]; error?: string }
-const IDLE: SourceState = { status: 'idle', items: [] }
+type SearchState = { status: 'idle' | 'loading' | 'done' | 'error'; items: FoundFood[]; error?: string }
 
-/** Search USDA + Open Food Facts when you press Search (not on every keystroke: both have rate limits). */
+/**
+ * Search USDA (whole foods + US branded products) when you press Search, not on every keystroke (rate limits).
+ * Open Food Facts text search was dropped: slow, often failing in Safari, and USDA covers US products.
+ */
 function SearchTab({ onPick, onLabel }: { onPick: (f: FoundFood) => void; onLabel: () => void }) {
   const [query, setQuery] = useState('')
-  const [usda, setUsda] = useState<SourceState>(IDLE)
-  const [off, setOff] = useState<SourceState>(IDLE)
+  const [res, setRes] = useState<SearchState>({ status: 'idle', items: [] })
   const ctrl = useRef<AbortController | null>(null)
   useEffect(() => () => ctrl.current?.abort(), [])
 
@@ -196,20 +197,18 @@ function SearchTab({ onPick, onLabel }: { onPick: (f: FoundFood) => void; onLabe
     ctrl.current?.abort()
     const c = new AbortController()
     ctrl.current = c
-    const load = (fn: typeof searchUsda, set: (s: SourceState) => void) => {
-      set({ status: 'loading', items: [] })
-      fn(q, c.signal).then(
-        (items) => !c.signal.aborted && set({ status: 'done', items }),
-        (err: unknown) => !c.signal.aborted && set({ status: 'error', items: [], error: navigator.onLine ? (err instanceof Error ? err.message : 'failed') : 'offline' }),
-      )
-    }
-    load(searchUsda, setUsda)
-    load(searchOff, setOff)
+    setRes({ status: 'loading', items: [] })
+    searchUsda(q, c.signal).then(
+      (items) => !c.signal.aborted && setRes({ status: 'done', items }),
+      (err: unknown) =>
+        !c.signal.aborted &&
+        setRes({ status: 'error', items: [], error: !navigator.onLine ? "you're offline" : err instanceof Error && err.message.startsWith('Too many') ? err.message : "couldn't connect, try again" }),
+    )
   }
 
-  const results = mergeResults(usda.items, off.items)
-  const loading = usda.status === 'loading' || off.status === 'loading'
-  const searched = usda.status !== 'idle'
+  const results = res.items
+  const loading = res.status === 'loading'
+  const searched = res.status !== 'idle'
   return (
     <div>
       <form onSubmit={run} className="flex gap-2" role="search">
@@ -229,17 +228,11 @@ function SearchTab({ onPick, onLabel }: { onPick: (f: FoundFood) => void; onLabe
       </form>
       {!searched && (
         <p className="py-6 text-center text-sm text-muted">
-          Searches USDA (whole foods and US brands) and Open Food Facts.
+          Searches USDA: whole foods (meat, eggs, rice…) and US brands.
           {usingDemoKey && <span className="mt-2 block text-amber-400">Using USDA's shared demo key: limited searches per hour.</span>}
         </p>
       )}
-      {[usda, off].map((s, i) =>
-        s.status === 'error' ? (
-          <p key={i} className="mt-3 text-sm text-amber-400">
-            {i === 0 ? 'USDA' : 'Open Food Facts'} search didn't work ({s.error}).
-          </p>
-        ) : null,
-      )}
+      {res.status === 'error' && <p className="mt-3 text-sm text-amber-400">Search didn't work ({res.error}).</p>}
       <ul className="mt-2">
         {results.map((f) => (
           <li key={`${f.source}:${f.source_id}`}>
@@ -251,13 +244,13 @@ function SearchTab({ onPick, onLabel }: { onPick: (f: FoundFood) => void; onLabe
                   {servingLabel(f)} · {f.kcal} kcal · {Math.round(f.protein_g)} g protein
                 </span>
               </span>
-              <span className="shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-muted">{f.source === 'usda' ? (f.generic ? 'USDA' : 'USDA brand') : 'OFF'}</span>
+              <span className="shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-muted">{f.generic ? 'Whole food' : 'Brand'}</span>
             </button>
           </li>
         ))}
       </ul>
-      {loading && <p className="py-4 text-center text-sm text-muted">Searching{results.length ? ' for more' : ''}…</p>}
-      {searched && !loading && results.length === 0 && <p className="py-6 text-center text-sm text-muted">Nothing found. Try fewer words.</p>}
+      {loading && <p className="py-4 text-center text-sm text-muted">Searching…</p>}
+      {res.status === 'done' && results.length === 0 && <p className="py-6 text-center text-sm text-muted">Nothing found. Try fewer words.</p>}
       {searched && !loading && (
         <button type="button" onClick={onLabel} className="mt-4 min-h-12 w-full rounded-xl border border-border text-sm">
           Not here? Type it from the label

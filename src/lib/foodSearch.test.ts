@@ -65,6 +65,10 @@ describe('Open Food Facts', () => {
     const f = fromOff({ code: '1', product_name: 'Rice', nutriments: { energy_100g: 1500, proteins_100g: 7 } })!
     expect(f).toMatchObject({ kcal: 359, serving_amount: 100, serving_unit: 'g', fiber_g: null })
   })
+  it('reads per-language names and brand lists (newer search service)', () => {
+    const f = fromOff({ code: '9', product_name: { main: 'Yaourt', en: 'Yogurt' }, brands: ['Chobani', 'Other'], nutriments: { 'energy-kcal_100g': 60 } })!
+    expect(f).toMatchObject({ name: 'Yogurt', brand: 'Chobani' })
+  })
   it('skips products without a name or calories', () => {
     expect(fromOff({ code: '1', product_name: '', nutriments: { 'energy-kcal_100g': 100 } })).toBeNull()
     expect(fromOff({ code: '1', product_name: 'X', nutriments: {} })).toBeNull()
