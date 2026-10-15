@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router'
+import { useConfirm } from '@/components/ConfirmProvider'
 import { useData } from './DataProvider'
 import { activeWorkout, startWorkout } from './workouts'
 
@@ -6,11 +7,17 @@ import { activeWorkout, startWorkout } from './workouts'
 export function useStartWorkout() {
   const { db, store } = useData()
   const navigate = useNavigate()
+  const confirm = useConfirm()
 
   return async (templateDayId: string | null, name: string) => {
     const running = await activeWorkout(db)
     if (running) {
-      if (confirm(`"${running.name ?? 'Workout'}" is still in progress. Open it instead?`)) navigate(`/workout/${running.id}`)
+      const ok = await confirm({
+        title: 'A workout is already in progress',
+        message: `Finish or delete "${running.name ?? 'Workout'}" before starting another.`,
+        confirmLabel: 'Open it',
+      })
+      if (ok) navigate(`/workout/${running.id}`)
       return
     }
     const planned = templateDayId

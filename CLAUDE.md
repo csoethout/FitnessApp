@@ -113,6 +113,8 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   foreground, reconnect, and every 60 s; no background sync on iOS.
 - Logger UX: only the current set is expanded (big steppers + ✓); done sets collapse to one line; optional
   effort/"couldn't finish" row after ✓; timer bar at bottom. iOS can't alert when the PWA is backgrounded.
+- Never use window.confirm/alert/prompt: iOS Safari (esp. home-screen apps) can silently block them (Finish "did
+  nothing"). Use `useConfirm()` from `src/components/ConfirmProvider.tsx` (in-app bottom sheet).
 - Allowed values are text + CHECK constraints, not Postgres enums (easier to extend).
 - Supabase "publishable"/anon key is safe in the frontend because RLS protects data. The service-role key is
   never in frontend code or the repo.

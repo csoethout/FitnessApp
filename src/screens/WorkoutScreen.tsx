@@ -1,6 +1,7 @@
 import { Check, ChevronLeft, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { useConfirm } from '@/components/ConfirmProvider'
 import { ExercisePicker } from '@/components/ExercisePicker'
 import { Stepper } from '@/components/Stepper'
 import { useData } from '@/data/DataProvider'
@@ -30,6 +31,8 @@ export function WorkoutScreen() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [justDoneId, setJustDoneId] = useState<string | null>(null)
   const [picking, setPicking] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const confirm = useConfirm()
   const usedIds = useMemo(() => new Set(data?.items.map((it) => it.we.exercise_id)), [data])
 
   if (data === undefined) return null
@@ -58,19 +61,35 @@ export function WorkoutScreen() {
   }
 
   async function finish() {
-    const message =
-      remaining > 0
-        ? `Finish workout? ${remaining} set${remaining === 1 ? '' : 's'} not done will be removed.`
-        : 'Finish workout?'
-    if (!confirm(message)) return
-    await finishWorkout(store, workout.id)
-    navigate('/train')
+    const ok = await confirm({
+      title: 'Finish workout?',
+      message: remaining > 0 ? `${remaining} set${remaining === 1 ? '' : 's'} not done will be removed.` : undefined,
+      confirmLabel: 'Finish',
+      cancelLabel: 'Keep going',
+    })
+    if (!ok) return
+    try {
+      await finishWorkout(store, workout.id)
+      navigate('/train')
+    } catch (e) {
+      setError(`Couldn't finish: ${e instanceof Error ? e.message : String(e)}`)
+    }
   }
 
   async function discard() {
-    if (!confirm('Delete this whole workout? This cannot be undone.')) return
-    await discardWorkout(store, workout.id)
-    navigate('/train')
+    const ok = await confirm({
+      title: 'Delete this workout?',
+      message: 'All sets in it will be removed. This cannot be undone.',
+      confirmLabel: 'Delete workout',
+      danger: true,
+    })
+    if (!ok) return
+    try {
+      await discardWorkout(store, workout.id)
+      navigate('/train')
+    } catch (e) {
+      setError(`Couldn't delete: ${e instanceof Error ? e.message : String(e)}`)
+    }
   }
 
   return (
@@ -93,6 +112,7 @@ export function WorkoutScreen() {
       </header>
 
       <main className="flex-1 space-y-3 overflow-y-auto px-3 py-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        {error && <p className="rounded-xl border border-danger/50 p-3 text-sm text-danger">{error}</p>}
         {items.map((item) => (
           <ExerciseCard
             key={item.we.id}
@@ -112,6 +132,15 @@ export function WorkoutScreen() {
         >
           <Plus size={20} /> Add exercise
         </button>
+        {!finished && (
+          <button
+            type="button"
+            onClick={() => void finish()}
+            className="min-h-14 w-full rounded-2xl bg-accent text-lg font-semibold text-accent-ink"
+          >
+            Finish workout
+          </button>
+        )}
         <button type="button" onClick={() => void discard()} className="min-h-12 w-full text-sm text-danger">
           Delete workout
         </button>

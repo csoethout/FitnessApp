@@ -1,10 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useData, useSyncStatus } from '@/data/DataProvider'
+import { useConfirm } from './ConfirmProvider'
 
 /** Plain-language sync state, so it's always clear whether workouts are safely on the server. */
 export function SyncStatusCard() {
   const { db, sync } = useData()
   const status = useSyncStatus()
+  const confirm = useConfirm()
   const exerciseCount = useLiveQuery(() => db.exercises.count(), [db])
 
   const headline =
@@ -55,8 +57,14 @@ export function SyncStatusCard() {
         {status.failed > 0 && (
           <button
             type="button"
-            onClick={() => {
-              if (confirm('Discard the rejected changes and reload from the server?')) void sync.discardFailed()
+            onClick={async () => {
+              const ok = await confirm({
+                title: 'Discard rejected changes?',
+                message: 'They will be removed from this phone and replaced with what is on the server.',
+                confirmLabel: 'Discard',
+                danger: true,
+              })
+              if (ok) void sync.discardFailed()
             }}
             className="min-h-12 flex-1 rounded-xl border border-danger/50 text-danger"
           >

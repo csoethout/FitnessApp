@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
+import { useConfirm } from '@/components/ConfirmProvider'
 import { Placeholder } from '@/components/Placeholder'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { SyncStatusCard } from '@/components/SyncStatusCard'
@@ -10,12 +11,21 @@ export function MoreScreen() {
   const { session } = useAuth()
   const { db, sync } = useData()
   const [signingOut, setSigningOut] = useState(false)
+  const confirm = useConfirm()
 
   async function signOut() {
     setSigningOut(true)
     await sync.syncNow() // last chance to upload anything saved offline
     const unsynced = await db.outbox.count()
-    if (unsynced > 0 && !confirm(`${unsynced} change(s) haven't uploaded yet and will be lost if you sign out. Sign out anyway?`)) {
+    if (
+      unsynced > 0 &&
+      !(await confirm({
+        title: 'Sign out anyway?',
+        message: `${unsynced} change(s) haven't uploaded yet and will be lost.`,
+        confirmLabel: 'Sign out',
+        danger: true,
+      }))
+    ) {
       setSigningOut(false)
       return
     }
