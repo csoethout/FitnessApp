@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useData } from '@/data/DataProvider'
 import { createCustomFood, logFood, logQuickAdd, MEAL_SLOTS, recentFoods, saveFoundFood, type RecentItem } from '@/data/food'
 import { searchUsda, usingDemoKey } from '@/data/foodApi'
-import { servingLabel, type FoundFood } from '@/lib/foodSearch'
+import { matchesQuery, servingLabel, type FoundFood } from '@/lib/foodSearch'
 import type { Food, MealSlot } from '@/data/types'
 import { effectiveKcal, EMPTY_MACROS, macrosValid, type MacroValues } from '@/lib/macroForm'
 import { EXTRA_NUTRIENTS, foodCol, type Extras } from '@/lib/nutrition'
@@ -86,7 +86,7 @@ export function AddFoodSheet(props: { date: string; slot: MealSlot; onClose: () 
       </div>
       <div className="flex-1 overflow-y-auto px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {tab === 'recent' && <RecentTab date={date} onPick={pickRecent} onEmpty={() => setTab('search')} />}
-        {tab === 'search' && <SearchTab onPick={pickFound} onLabel={() => setTab('label')} />}
+        {tab === 'search' && <SearchTab date={date} onPick={pickFound} onPickMine={pickRecent} onLabel={() => setTab('label')} />}
         {tab === 'label' && <LabelTab date={date} slot={slot} onDone={onClose} />}
         {tab === 'quick' && <QuickTab date={date} slot={slot} onDone={onClose} />}
       </div>
@@ -177,36 +177,62 @@ function PortionSheet({ portion: p, onCancel, onDone }: { portion: Portion; onCa
   )
 }
 
-type SearchState = { status: 'idle' | 'loading' | 'done' | 'error'; items: FoundFood[]; error?: string }
+type SearchState = { status: 'idle' | 'loading' | 'done' | 'error'; query: string; items: FoundFood[]; error?: string }
+const AUTO_DELAY_MS = 500
 
 /**
- * Search USDA (whole foods + US branded products) when you press Search, not on every keystroke (rate limits).
+ * Your own foods match instantly as you type (on the phone, works offline). USDA (whole foods + US brands) is
+ * searched when you pause typing, or on Search. With the shared DEMO_KEY only on Search (30 requests an hour).
  * Open Food Facts text search was dropped: slow, often failing in Safari, and USDA covers US products.
  */
-function SearchTab({ onPick, onLabel }: { onPick: (f: FoundFood) => void; onLabel: () => void }) {
+function SearchTab(props: { date: string; onPick: (f: FoundFood) => void; onPickMine: (r: RecentItem) => void; onLabel: () => void }) {
+  const { date, onPick, onPickMine, onLabel } = props
+  const { db } = useData()
   const [query, setQuery] = useState('')
-  const [res, setRes] = useState<SearchState>({ status: 'idle', items: [] })
+  const [res, setRes] = useState<SearchState>({ status: 'idle', query: '', items: [] })
   const ctrl = useRef<AbortController | null>(null)
+  const cache = useRef(new Map<string, FoundFood[]>()) // backspacing doesn't search again
   useEffect(() => () => ctrl.current?.abort(), [])
+  const mineAll = useLiveQuery(() => recentFoods(db, date, 365, 500), [db, date])
+  const q = query.trim()
+  const mine = q.length >= 2 ? (mineAll ?? []).filter((r) => matchesQuery(`${r.name} ${r.food?.brand ?? ''}`, q)).slice(0, 8) : []
 
-  function run(e: React.FormEvent) {
-    e.preventDefault()
-    const q = query.trim()
-    if (q.length < 2) return
-    ;(document.activeElement as HTMLElement | null)?.blur() // hide the iOS keyboard so results are visible
+  function search(text: string) {
+    if (text.length < 2 || (text === res.query && res.status !== 'error')) return
     ctrl.current?.abort()
+    const hit = cache.current.get(text.toLowerCase())
+    if (hit) return setRes({ status: 'done', query: text, items: hit })
     const c = new AbortController()
     ctrl.current = c
-    setRes({ status: 'loading', items: [] })
-    searchUsda(q, c.signal).then(
-      (items) => !c.signal.aborted && setRes({ status: 'done', items }),
+    setRes((r) => ({ status: 'loading', query: text, items: r.items }))
+    searchUsda(text, c.signal).then(
+      (items) => {
+        cache.current.set(text.toLowerCase(), items)
+        if (!c.signal.aborted) setRes({ status: 'done', query: text, items })
+      },
       (err: unknown) =>
         !c.signal.aborted &&
-        setRes({ status: 'error', items: [], error: !navigator.onLine ? "you're offline" : err instanceof Error && err.message.startsWith('Too many') ? err.message : "couldn't connect, try again" }),
+        setRes({ status: 'error', query: text, items: [], error: !navigator.onLine ? "you're offline" : err instanceof Error && err.message.startsWith('Too many') ? err.message : "couldn't connect, try again" }),
     )
   }
 
-  const results = res.items
+  // As you type: wait for a short pause, then search (each new letter cancels the wait).
+  useEffect(() => {
+    if (usingDemoKey || q.length < 3) return
+    const t = setTimeout(() => search(q), AUTO_DELAY_MS)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q])
+
+  function run(e: React.FormEvent) {
+    e.preventDefault()
+    ;(document.activeElement as HTMLElement | null)?.blur() // hide the iOS keyboard so results are visible
+    search(q)
+  }
+
+  // Hide USDA results you already have a copy of (they're under Your foods).
+  const mineIds = new Set(mine.map((r) => r.food?.source_id).filter(Boolean))
+  const results = res.items.filter((f) => !mineIds.has(f.source_id))
   const loading = res.status === 'loading'
   const searched = res.status !== 'idle'
   return (
@@ -226,14 +252,34 @@ function SearchTab({ onPick, onLabel }: { onPick: (f: FoundFood) => void; onLabe
           <Search size={20} />
         </button>
       </form>
-      {!searched && (
+      {mine.length > 0 && (
+        <>
+          <p className="mt-3 text-xs font-semibold text-muted uppercase">Your foods</p>
+          <ul>
+            {mine.map((r) => (
+              <li key={r.key}>
+                <button type="button" onClick={() => onPickMine(r)} className="flex min-h-14 w-full items-center gap-3 border-b border-border py-2 text-left">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{r.name}</span>
+                    <span className="block text-xs text-muted">
+                      {r.food ? servingLabel(r.food) : 'Quick add'} · {Math.round(r.kcal)} kcal · {Math.round(r.protein_g)} g protein
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {!searched && mine.length === 0 && (
         <p className="py-6 text-center text-sm text-muted">
           Searches USDA: whole foods (meat, eggs, rice…) and US brands.
           {usingDemoKey && <span className="mt-2 block text-amber-400">Using USDA's shared demo key: limited searches per hour.</span>}
         </p>
       )}
       {res.status === 'error' && <p className="mt-3 text-sm text-amber-400">Search didn't work ({res.error}).</p>}
-      <ul className="mt-2">
+      {results.length > 0 && <p className="mt-3 text-xs font-semibold text-muted uppercase">USDA</p>}
+      <ul>
         {results.map((f) => (
           <li key={`${f.source}:${f.source_id}`}>
             <button type="button" onClick={() => onPick(f)} className="flex min-h-14 w-full items-center gap-3 border-b border-border py-2 text-left">
@@ -249,8 +295,8 @@ function SearchTab({ onPick, onLabel }: { onPick: (f: FoundFood) => void; onLabe
           </li>
         ))}
       </ul>
-      {loading && <p className="py-4 text-center text-sm text-muted">Searching…</p>}
-      {res.status === 'done' && results.length === 0 && <p className="py-6 text-center text-sm text-muted">Nothing found. Try fewer words.</p>}
+      {loading && results.length === 0 && <p className="py-4 text-center text-sm text-muted">Searching USDA…</p>}
+      {res.status === 'done' && results.length === 0 && mine.length === 0 && <p className="py-6 text-center text-sm text-muted">Nothing found. Try fewer words.</p>}
       {searched && !loading && (
         <button type="button" onClick={onLabel} className="mt-4 min-h-12 w-full rounded-xl border border-border text-sm">
           Not here? Type it from the label

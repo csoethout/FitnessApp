@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { amountLabel, fromOff, fromUsda, mergeResults, servingLabel, tidyName } from './foodSearch'
+import { amountLabel, matchesQuery, fromOff, fromUsda, mergeResults, servingLabel, tidyName } from './foodSearch'
 
 const usdaGeneric = {
   fdcId: 171477,
@@ -82,6 +82,11 @@ describe('helpers', () => {
     const offSame = fromOff({ code: '0689544080503', product_name: 'Greek yogurt', nutriments: { 'energy-kcal_100g': 53 } })!
     const offOther = fromOff({ code: '5', product_name: 'Other', nutriments: { 'energy-kcal_100g': 53 } })!
     expect(mergeResults([branded, generic], [offSame, offOther]).map((f) => f.source_id)).toEqual(['171477', '2000001', '5'])
+  })
+  it('matches every typed word', () => {
+    expect(matchesQuery('Chicken breast (Kirkland)', 'chi BRE')).toBe(true)
+    expect(matchesQuery('Chicken breast', 'chicken thigh')).toBe(false)
+    expect(matchesQuery('Chicken breast', '  ')).toBe(false)
   })
   it('tidies all-caps names only', () => {
     expect(tidyName('CHICKEN BREAST (BONELESS)')).toBe('Chicken Breast (Boneless)')

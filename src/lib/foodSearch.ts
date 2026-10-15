@@ -187,3 +187,10 @@ export function amountLabel(servings: number, food: { serving_amount: number; se
   const n = Math.round(servings * 100) / 100
   return `${n} serving${n === 1 ? '' : 's'}`
 }
+
+/** Does `text` contain every word of `query`? Case-insensitive; "chi bre" matches "Chicken breast". */
+export function matchesQuery(text: string, query: string): boolean {
+  const t = text.toLowerCase()
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+  return words.length > 0 && words.every((w) => t.includes(w))
+}

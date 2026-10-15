@@ -205,7 +205,9 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] 4.1 Weigh-ins: Today card + sheet (weight / body fat % / muscle mass, each prefilled from its own latest
         value), Progress → Body (dots + 7-day avg on a real time axis, weekly rate, 30/90/all, edit list, other day);
         `body_measurements` synced (Dexie v2); testing tools add/delete sample weigh-ins
-  - [ ] Owner: get USDA key → Cloudflare build var `VITE_USDA_API_KEY` (app works on DEMO_KEY until then)
+  - [x] Owner: USDA key in Cloudflare build var `VITE_USDA_API_KEY` (confirmed working)
+  - [x] Search as you type (owner request): your own foods match instantly (local, offline); USDA after a 500 ms
+        pause (≥3 letters; only with a real key, DEMO_KEY waits for the Search button); per-query cache
   - [x] 4.2 Food log: Food tab day view (‹ › days, ?d=), calorie/protein meters + carbs/fat, 4 meals, add sheet
         (Recent default · Nutrition label → own food · Quick add), edit/move/delete entry, copy yesterday (day or
         meal), Today food card; Dexie v3 food tables
