@@ -1,6 +1,7 @@
 import type { LocalDb } from './db'
 import type { LocalStore } from './store'
 import { EXTRA_NUTRIENTS, entryCol, foodCol } from '@/lib/nutrition'
+import type { FoundFood } from '@/lib/foodSearch'
 import type { Food, FoodLogEntry, MealSlot } from './types'
 
 const live = <T extends { deleted_at: string | null }>(rows: T[]) => rows.filter((r) => !r.deleted_at)
@@ -131,4 +132,17 @@ function shift(date: string, days: number) {
   const [y, m, d] = date.split('-').map(Number)
   const r = new Date(y, m - 1, d + days)
   return `${r.getFullYear()}-${String(r.getMonth() + 1).padStart(2, '0')}-${String(r.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * A food picked from search (or a barcode): re-use your copy if you've logged it before, else save it as your own
+ * food. Your copy is a snapshot, so later edits to USDA / Open Food Facts don't change your history.
+ */
+export async function saveFoundFood(store: LocalStore, found: FoundFood): Promise<Food> {
+  const mine = live(await store.db.foods.where('owner_id').equals(store.userId).toArray())
+  const existing = mine.find((f) => f.source === found.source && f.source_id === found.source_id)
+  if (existing) return existing
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { generic, ...row } = found
+  return store.insert('foods', row)
 }

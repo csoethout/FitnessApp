@@ -205,7 +205,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] 4.1 Weigh-ins: Today card + sheet (weight / body fat % / muscle mass, each prefilled from its own latest
         value), Progress → Body (dots + 7-day avg on a real time axis, weekly rate, 30/90/all, edit list, other day);
         `body_measurements` synced (Dexie v2); testing tools add/delete sample weigh-ins
-  - [ ] Owner: get USDA key → Cloudflare build var `VITE_USDA_API_KEY`
+  - [ ] Owner: get USDA key → Cloudflare build var `VITE_USDA_API_KEY` (app works on DEMO_KEY until then)
   - [x] 4.2 Food log: Food tab day view (‹ › days, ?d=), calorie/protein meters + carbs/fat, 4 meals, add sheet
         (Recent default · Nutrition label → own food · Quick add), edit/move/delete entry, copy yesterday (day or
         meal), Today food card; Dexie v3 food tables
@@ -217,7 +217,11 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         save blocked when macros need >115% of the calories (+10); amber hint when far under (fiber/alcohol);
         optional fiber, sugar, sat fat, trans fat, cholesterol, sodium on label entry; day totals under the meters
   - [ ] Owner: run `20261016000000_extra_nutrients.sql` in Supabase SQL Editor
-  - [ ] 4.3 Food search (USDA + Open Food Facts)
+  - [x] 4.3 Food search tab (search on submit, not per keystroke: rate limits): USDA whole foods (Foundation, SR
+        Legacy, Survey) first, then USDA branded, then Open Food Facts (US); duplicates by barcode dropped; parsing in
+        `src/lib/foodSearch.ts` (unit tested), fetches in `src/data/foodApi.ts` (falls back to USDA DEMO_KEY).
+        Picking saves your own copy (`saveFoundFood`, re-used next time). Amount in servings or grams
+        (`AmountPicker`, also when editing an entry); day list shows "225 g" for gram-measured foods
   - [ ] 4.4 Barcode scanning
   - [ ] 4.5 Saved meals / recipes
 - [ ] **Phase 5: rules-based planner, Plan my week, equipment profiles, cardio logging**

@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, Copy, Plus, Target } from 'lucide-react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AddFoodSheet } from '@/components/AddFoodSheet'
@@ -10,6 +11,7 @@ import { useDayLog, useTargetOn } from '@/data/foodHooks'
 import type { FoodLogEntry, MealSlot } from '@/data/types'
 import { localDateKey } from '@/lib/body'
 import { formatDay } from '@/lib/dates'
+import { amountLabel } from '@/lib/foodSearch'
 import { addDaysKey, entryMacros, sumExtras, sumMacros } from '@/lib/nutrition'
 
 /** One day of eating: calories/protein vs target, meals, add food, copy yesterday. Date lives in ?d= so Back works. */
@@ -20,8 +22,9 @@ export function FoodScreen() {
   const setDate = (d: string) => setParams(d === today ? {} : { d }, { replace: true })
   const yesterday = addDaysKey(date, -1)
 
-  const { store } = useData()
+  const { store, db } = useData()
   const entries = useDayLog(date)
+  const foods = useLiveQuery(async () => new Map((await db.foods.toArray()).map((f) => [f.id, f])), [db])
   const prevEntries = useDayLog(yesterday)
   const target = useTargetOn(date)
   const [adding, setAdding] = useState<MealSlot | null>(null)
@@ -97,7 +100,7 @@ export function FoodScreen() {
                         <span className="min-w-0 flex-1">
                           <span className="block truncate">{e.name}</span>
                           <span className="block text-xs text-muted">
-                            {e.food_id ? `${e.servings} serving${e.servings === 1 ? '' : 's'} · ` : ''}
+                            {e.food_id ? `${amountLabel(e.servings, foods?.get(e.food_id))} · ` : ''}
                             {Math.round(m.protein_g)} g protein
                           </span>
                         </span>

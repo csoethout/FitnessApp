@@ -1,14 +1,16 @@
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { useData } from '@/data/DataProvider'
 import { MEAL_SLOTS } from '@/data/food'
 import type { FoodLogEntry } from '@/data/types'
 import { entryMacros } from '@/lib/nutrition'
 import { Sheet } from './Sheet'
-import { Stepper } from './Stepper'
+import { AmountPicker } from './AmountPicker'
 
-/** Change servings or meal of a logged food, or delete it. */
+/** Change amount (servings or grams) or meal of a logged food, or delete it. */
 export function EntrySheet({ entry, onClose }: { entry: FoodLogEntry; onClose: () => void }) {
-  const { store } = useData()
+  const { store, db } = useData()
+  const food = useLiveQuery(async () => (entry.food_id ? ((await db.foods.get(entry.food_id)) ?? null) : null), [db, entry.food_id])
   const [servings, setServings] = useState(entry.servings)
   const [slot, setSlot] = useState(entry.meal_slot)
   const m = entryMacros({ ...entry, servings })
@@ -16,10 +18,9 @@ export function EntrySheet({ entry, onClose }: { entry: FoodLogEntry; onClose: (
   return (
     <Sheet title={entry.name} onClose={onClose}>
       <div className="space-y-4 pb-2">
-        <div className="flex items-center justify-between">
-          <span>Servings</span>
-          <Stepper label="servings" value={servings} step={0.25} min={0.25} max={20} format={(v) => String(v)} onChange={setServings} onTypeValue={(v) => setServings(Math.max(0.25, v))} />
-        </div>
+        {food !== undefined && (
+          <AmountPicker servings={servings} onChange={setServings} gramsPerServing={food?.serving_grams ?? null} startInGrams={food?.serving_unit === 'g'} />
+        )}
         <div className="flex flex-wrap gap-2">
           {MEAL_SLOTS.map((s) => (
             <button
