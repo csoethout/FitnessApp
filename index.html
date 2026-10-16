@@ -6,7 +6,7 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="Soev's Lab" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0b0f14" />
+    <meta name="theme-color" content="#0a0a0a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Soev's Strength Lab</title>
@@ -17,10 +17,10 @@
       Safety net: if the app hasn't drawn anything after 8 s (crashed, or its code failed to load), show what
       happened with Reload / Reset instead of a black screen. Plain JS on purpose: it must work when the app doesn't.
     -->
-    <div id="boot-help" hidden style="position:fixed;inset:0;padding:max(24px,env(safe-area-inset-top)) 20px 24px;background:#0b0f14;color:#e5e7eb;font:16px/1.4 -apple-system,system-ui,sans-serif;overflow:auto">
+    <div id="boot-help" hidden style="position:fixed;inset:0;padding:max(24px,env(safe-area-inset-top)) 20px 24px;background:#0a0a0a;color:#ededed;font:16px/1.4 -apple-system,system-ui,sans-serif;overflow:auto">
       <h1 style="font-size:22px;margin:0 0 8px">The app didn't start</h1>
       <p style="color:#9ca3af;margin:0 0 16px">Your data is safe on the server. Try Reload first; if that doesn't help, Reset app downloads a fresh copy of the app (your account and data stay).</p>
-      <button id="boot-reload" style="display:block;width:100%;min-height:52px;border:0;border-radius:12px;background:#4ade80;color:#052e14;font-weight:600;font-size:17px;margin-bottom:10px">Reload</button>
+      <button id="boot-reload" style="display:block;width:100%;min-height:52px;border:0;border-radius:12px;background:#a8c8ff;color:#0b1b33;font-weight:600;font-size:17px;margin-bottom:10px">Reload</button>
       <button id="boot-reset" style="display:block;width:100%;min-height:52px;border:1px solid #374151;border-radius:12px;background:transparent;color:#e5e7eb;font-size:17px">Reset app</button>
       <p style="color:#9ca3af;font-size:13px;margin:16px 0 4px">What went wrong (send this to Claude):</p>
       <pre id="boot-error" style="white-space:pre-wrap;font-size:12px;color:#fca5a5;margin:0"></pre>

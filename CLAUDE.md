@@ -149,8 +149,10 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 - Branding (UX pass, 2026-10-16): name **Soev's Strength Lab** (home-screen label "Soev's Lab": iOS cuts the full
   name), tagline "Strength · Health · Discipline". Icon = owner's logo (paw + barbell, distressed white on near-black
   #090909), source in `docs/brand/`; PNGs in `public/` are the card cropped from the source, grayscale-optimized
-  (180 apple-touch, 192, 512, maskable 512 with the logo in the 80% safe zone, 64 favicon). Colors: next step,
-  chosen from the logo + the owner's home-screen background image.
+  (180 apple-touch, 192, 512, maskable 512 with the logo in the 80% safe zone, 64 favicon). Colors "Moonlight"
+  (`src/index.css` tokens): neutral bg #0a0a0a / surface #141414 / surface-2 #1f1f1f / border #2c2c2c, text #ededed,
+  muted #9c9c9c, accent icy blue #a8c8ff on ink #0b1b33, danger #f87171, chart #6292dd (dataviz validator: L 0.48–0.67,
+  chroma, 3:1 on #141414). Theme/manifest/boot-help colors match. All UI colors come from these tokens.
 - No black screens (owner bug 2026-10-16: home-screen app opened to a black screen, cause unknown — no WebKit here):
   index.html has a plain-JS boot watchdog (#boot-help): if #root is empty after 8 s, or ErrorBoundary / RouteError
   catch a crash, it shows the error text + user agent with Reload and "Reset app" (unregisters the service worker,
@@ -181,7 +183,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   vs workouts that started earlier; none the first time an exercise is logged. All computed, never stored.
 - Progress metrics: est. 1-rep max when an exercise has sets ≤10 reps, else heaviest weight (12–15 rep work), else
   most reps (bodyweight). Sets per muscle count once per PRIMARY muscle group, warm-ups excluded. Weekly target
-  marker = 10 sets. Chart color `--color-chart` #16a34a (validated with the dataviz skill for the dark surface).
+  marker = 10 sets. Chart color `--color-chart` (see Branding; validated with the dataviz skill).
   Recharts is lazy-loaded only on the lift detail page; other charts are plain HTML/SVG.
 - Body trend (`src/lib/body.ts`): 7-day trailing average of readings (gaps OK); weekly rate = least-squares slope
   over the last 14 days (needs ≥4 readings spanning ≥7 days). Dates are LOCAL YYYY-MM-DD (`localDateKey`).
@@ -325,7 +327,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 - [x] Name + icon: Soev's Strength Lab, owner's logo
 - [x] Sign-in screen = owner's wolf artwork (`public/sign-in.webp`, source in docs/brand; title + tagline are baked
       into the image, so only an sr-only h1): full-bleed, bottom fade, frosted inputs, off-white wide-tracked SIGN IN
-- [ ] Colors for the rest of the app, from the logo + wolf artwork (monochrome storm palette)
+- [x] Colors: owner picked B "Moonlight" from 4 rendered options (`docs/brand/palette-options.png`)
 
 ## Backlog (not in MVP)
 - kg units setting (profile.unit_system exists; replace the lb constants: WEIGHT_UNIT, UNIT in screens, body/plan screens)

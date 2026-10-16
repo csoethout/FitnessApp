@@ -1,19 +1,23 @@
 @import "tailwindcss";
 
-/* Design tokens. Dark-first: easier on the eyes in a gym, saves battery on OLED iPhones. */
+/*
+ * Design tokens: "Moonlight" (owner's pick, UX pass). Neutral blacks and greys from the logo and the wolf artwork,
+ * with an icy blue accent like the light breaking through the storm. Dark-first: easier on the eyes in a gym,
+ * saves battery on OLED iPhones.
+ */
 @theme {
-  --color-bg: #0b0f14;
-  --color-surface: #151b23;
-  --color-surface-2: #1f2730;
-  --color-border: #2a3440;
-  --color-text: #e8edf2;
-  --color-muted: #8b98a7;
-  --color-accent: #4ade80;
-  --color-accent-ink: #052e14;
+  --color-bg: #0a0a0a;
+  --color-surface: #141414;
+  --color-surface-2: #1f1f1f;
+  --color-border: #2c2c2c;
+  --color-text: #ededed;
+  --color-muted: #9c9c9c;
+  --color-accent: #a8c8ff;
+  --color-accent-ink: #0b1b33;
   --color-danger: #f87171;
-  /* Chart marks: validated for the dark surface (dataviz lightness band + 3:1 contrast). */
-  --color-chart: #16a34a;
-  --color-grid: #2a3440;
+  /* Chart marks: validated for the dark surface with the dataviz validator (lightness band, chroma, 3:1 contrast). */
+  --color-chart: #6292dd;
+  --color-grid: #2c2c2c;
 }
 
 html,
