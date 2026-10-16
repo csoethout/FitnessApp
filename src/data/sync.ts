@@ -110,14 +110,24 @@ export class SyncEngine {
     return 'ok'
   }
 
-  /** Give up on changes the server rejected, and re-download those tables so the phone matches the server. */
+  /**
+   * Give up on changes the server rejected: drop them and the phone's copy of those rows, then re-download those
+   * tables, so the server's version wins (e.g. a second "today's target" made before the first download finished).
+   */
   async discardFailed() {
     const failed = await this.db.outbox.filter((e) => e.failed).toArray()
-    const tables = new Set(failed.map((e) => e.table))
-    await this.db.transaction('rw', this.db.outbox, this.db.meta, async () => {
+    const tables = [...new Set(failed.map((e) => e.table))]
+    await this.db.transaction('rw', [this.db.outbox, this.db.meta, ...tables.map((t) => this.db[t])], async () => {
       await this.db.outbox.bulkDelete(failed.map((e) => [e.table, e.id] as [TableName, string]))
+      for (const e of failed) await this.db[e.table].delete(e.id)
       for (const t of tables) await this.db.meta.delete(`cursor:${t}`)
     })
+  }
+
+  /** Send rejected changes again (after the cause was fixed on the server, e.g. a missing migration was run). */
+  async retryFailed() {
+    const failed = await this.db.outbox.filter((e) => e.failed).toArray()
+    await this.db.outbox.bulkPut(failed.map((e) => ({ ...e, failed: false })))
   }
 }
 

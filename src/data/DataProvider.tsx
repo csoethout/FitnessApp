@@ -1,3 +1,4 @@
+import { useLiveQuery } from 'dexie-react-hooks'
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
 import { supabase } from '@/lib/supabase'
@@ -5,7 +6,7 @@ import { openLocalDb, type LocalDb } from './db'
 import { supabaseRemote } from './remote'
 import { LocalStore } from './store'
 import { SyncEngine } from './sync'
-import { SyncManager } from './syncManager'
+import { FIRST_SYNC_KEY, SyncManager } from './syncManager'
 
 type DataContext = { db: LocalDb; store: LocalStore; sync: SyncManager }
 
@@ -51,4 +52,11 @@ export function useData(): DataContext {
 export function useSyncStatus() {
   const { sync } = useData()
   return useSyncExternalStore(sync.subscribe, sync.getStatus)
+}
+
+/** True once this device has finished its first full download (see FIRST_SYNC_KEY). undefined while loading. */
+// eslint-disable-next-line react/only-export-components
+export function useFirstSyncDone() {
+  const { db } = useData()
+  return useLiveQuery(async () => !!(await db.meta.get(FIRST_SYNC_KEY)), [db])
 }

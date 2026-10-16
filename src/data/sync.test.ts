@@ -109,6 +109,20 @@ describe('local-first saving', () => {
 
     await engine.discardFailed()
     expect(await db.outbox.count()).toBe(0)
+    expect(await db.sets.get(ids[1])).toBeUndefined() // the phone's rejected copy is gone too
+    expect(await db.sets.get(ids[0])).toBeDefined()
+  })
+
+  it('retries rejected changes once the cause is fixed', async () => {
+    const { set } = await logOneSet()
+    remote.reject = (table) => (table === 'sets' ? { message: 'column "x" does not exist', code: '42703' } : null)
+    await engine.sync()
+    expect(await db.outbox.get(['sets', set.id])).toMatchObject({ failed: true })
+    remote.reject = null // e.g. the missing migration was run
+    await engine.retryFailed()
+    await engine.sync()
+    expect(remote.table('sets').has(set.id)).toBe(true)
+    expect(await db.outbox.count()).toBe(0)
   })
 
   it('syncs deletions as soft deletes', async () => {

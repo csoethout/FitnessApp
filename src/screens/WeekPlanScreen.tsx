@@ -2,7 +2,7 @@ import { Check, ChevronLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Stepper } from '@/components/Stepper'
-import { useData } from '@/data/DataProvider'
+import { useData, useFirstSyncDone } from '@/data/DataProvider'
 import { ensureWeekPlan, resetWeek, setDay, useWeek, weekStartOf, type WeekView } from '@/data/weekPlan'
 import type { WeekPlanDay } from '@/data/types'
 import { localDateKey } from '@/lib/body'
@@ -27,9 +27,11 @@ export function WeekPlanScreen() {
   const { store } = useData()
   const week = useWeek(weekStart)
 
+  const synced = useFirstSyncDone()
   useEffect(() => {
-    void ensureWeekPlan(store, weekStart)
-  }, [store, weekStart])
+    // Only after this device's first full download: the week may already exist on the server (another device).
+    if (synced) void ensureWeekPlan(store, weekStart)
+  }, [store, weekStart, synced])
 
   const tab = (on: boolean) => `min-h-11 flex-1 rounded-lg text-sm ${on ? 'bg-surface-2 font-semibold' : 'text-muted'}`
   return (

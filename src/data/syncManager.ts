@@ -8,6 +8,7 @@ export type SyncStatus = {
   lastSyncedAt: string | null
 }
 
+export const FIRST_SYNC_KEY = 'firstSyncDone'
 const DEBOUNCE_MS = 800
 const INTERVAL_MS = 60_000
 
@@ -69,6 +70,9 @@ export class SyncManager {
         this.set({ state: 'syncing' })
         const result = navigator.onLine ? await this.engine.sync().catch(() => 'offline' as const) : 'offline'
         await this.refreshCounts()
+        // Remembered per device: until the first full download is done, automatic writes (today's target, a new
+        // week plan) wait, so a fresh install can't create duplicates of rows the server already has.
+        if (result === 'ok' && !(await this.db.meta.get(FIRST_SYNC_KEY))) await this.db.meta.put({ key: FIRST_SYNC_KEY, value: new Date().toISOString() })
         this.set(result === 'ok' ? { state: 'idle', lastSyncedAt: new Date().toISOString() } : { state: 'offline' })
       } while (this.again)
     })()
@@ -81,6 +85,11 @@ export class SyncManager {
 
   async discardFailed() {
     await this.engine.discardFailed()
+    await this.syncNow()
+  }
+
+  async retryFailed() {
+    await this.engine.retryFailed()
     await this.syncNow()
   }
 

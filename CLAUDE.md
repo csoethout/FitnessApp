@@ -148,7 +148,11 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   download. CSV cells are RFC 4180 and formula-defused (`src/lib/csv.ts`).
 - Sync: one IndexedDB per user (`liftlog-<uid>`), deleted on sign-out (after warning about unsynced changes).
   Server owns `updated_at`; pull uses keyset (updated_at, id); rows with pending local edits are never overwritten;
-  server-rejected rows are marked failed (shown in More) instead of blocking the queue. Syncs on write (debounced),
+  server-rejected rows are marked failed (shown in More with the table and a plain-language reason; "Try again"
+  re-sends them, "Discard" drops them AND the phone's copy, then re-downloads those tables) instead of blocking the
+  queue. Automatic writers (TargetKeeper's daily target, ensureWeekPlan) wait for this device's first full download
+  (meta `firstSyncDone`, `useFirstSyncDone`): a fresh install (e.g. re-adding the home-screen app, which gets its own
+  storage) otherwise created a duplicate "today's target" → unique-key rejection (owner bug, 2026-10-16). Syncs on write (debounced),
   foreground, reconnect, and every 60 s; no background sync on iOS.
 - Logger UX: only the current set is expanded (big steppers + ✓); done sets collapse to one line; optional
   effort/"couldn't finish" row after ✓; timer bar at bottom. iOS can't alert when the PWA is backgrounded.

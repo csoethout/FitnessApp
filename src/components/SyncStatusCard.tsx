@@ -1,6 +1,24 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useData, useSyncStatus } from '@/data/DataProvider'
+import type { TableName } from '@/data/types'
 import { useConfirm } from './ConfirmProvider'
+
+const TABLE_LABELS: Partial<Record<TableName, string>> = {
+  nutrition_targets: "Today's calorie target", week_plans: 'Week plan', week_plan_days: 'Week plan day', body_measurements: 'Weigh-in',
+  food_log_entries: 'Food entry', foods: 'Saved food', saved_meals: 'Saved meal', saved_meal_items: 'Saved meal food',
+  workouts: 'Workout', workout_exercises: 'Workout exercise', sets: 'Set', cardio_entries: 'Cardio', profiles: 'Profile / settings',
+  goals: 'Goal', equipment_profiles: 'Gym', exercise_unavailable: '"Not at this gym"', plan_templates: 'Weekly plan',
+  plan_template_days: 'Weekly plan day', plan_template_exercises: 'Weekly plan exercise',
+}
+
+/** What a server error means, in plain words, and what to do about it. */
+function explain(error: string | null): string {
+  if (!error) return 'Rejected by the server.'
+  if (/duplicate key|unique/i.test(error)) return "The server already has this (made on another device or before this phone finished downloading). Discard keeps the server's version; nothing you entered is lost."
+  if (/column|schema cache/i.test(error)) return 'The database needs an update (a SQL migration that hasn’t been run). Run it, then tap Try again.'
+  if (/foreign key|violates/i.test(error)) return `It points at something the server doesn't have. Discard keeps the server's version. (${error})`
+  return error
+}
 
 /** Plain-language sync state, so it's always clear whether workouts are safely on the server. */
 export function SyncStatusCard() {
@@ -8,6 +26,7 @@ export function SyncStatusCard() {
   const status = useSyncStatus()
   const confirm = useConfirm()
   const exerciseCount = useLiveQuery(() => db.exercises.count(), [db])
+  const failedEntries = useLiveQuery(() => db.outbox.filter((e) => e.failed).toArray(), [db, status.failed])
 
   const headline =
     status.failed > 0
@@ -43,6 +62,11 @@ export function SyncStatusCard() {
           <p className="font-medium">{headline}</p>
           <p className="text-sm text-muted">{detail}</p>
           <p className="mt-1 text-xs text-muted">Exercise library on this phone: {exerciseCount ?? '…'}</p>
+          {failedEntries?.map((e) => (
+            <p key={`${e.table}:${e.id}`} className="mt-2 text-sm">
+              <span className="font-medium">{TABLE_LABELS[e.table] ?? e.table}:</span> <span className="text-muted">{explain(e.last_error)}</span>
+            </p>
+          ))}
         </div>
       </div>
       <div className="mt-3 flex gap-2">
@@ -55,12 +79,17 @@ export function SyncStatusCard() {
           Sync now
         </button>
         {status.failed > 0 && (
+          <button type="button" onClick={() => void sync.retryFailed()} className="min-h-12 flex-1 rounded-xl border border-border bg-surface-2">
+            Try again
+          </button>
+        )}
+        {status.failed > 0 && (
           <button
             type="button"
             onClick={async () => {
               const ok = await confirm({
                 title: 'Discard rejected changes?',
-                message: 'They will be removed from this phone and replaced with what is on the server.',
+                message: "This phone's copy is replaced with what's on the server.",
                 confirmLabel: 'Discard',
                 danger: true,
               })
@@ -68,7 +97,7 @@ export function SyncStatusCard() {
             }}
             className="min-h-12 flex-1 rounded-xl border border-danger/50 text-danger"
           >
-            Discard rejected
+            Discard
           </button>
         )}
       </div>
