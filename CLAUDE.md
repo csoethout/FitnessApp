@@ -272,7 +272,8 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] 4.2c Macro check + optional nutrients (owner request): calories auto-fill from P/C/F (4/4/9) until typed;
         save blocked when macros need >115% of the calories (+10); amber hint when far under (fiber/alcohol);
         optional fiber, sugar, sat fat, trans fat, cholesterol, sodium on label entry; day totals under the meters
-  - [ ] Owner: run `20261016000000_extra_nutrients.sql` in Supabase SQL Editor
+  - [x] Owner: run `20261016000000_extra_nutrients.sql` in Supabase SQL Editor (inferred 2026-10-16: food entries,
+        which always send the new columns, sync fine)
   - [x] 4.3 Food search tab (search on submit, not per keystroke: rate limits): USDA whole foods (Foundation, SR
         Legacy, Survey) first, then USDA branded. Open Food Facts text search dropped (owner OK'd: slow, "Load failed"
         in Safari, USDA covers US brands); OFF is kept for barcode lookups only (4.4: USDA gtinUpc first, then OFF). Parsing in
@@ -304,7 +305,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         Busy/Away (No gym or another gym profile), notes explaining every change, est. minutes; Today card follows
         the plan; `week_plans`/`week_plan_days` synced (Dexie v5)
   - [x] 5.4 Gyms (equipment profiles for Away days), cardio logging (Today card), settings (rest timer / effort toggles)
-  - [ ] Owner: test Phase 5 on iPhone
+  - [x] Owner: test Phase 5 on iPhone ("all working"); test data cleared 2026-10-16
 - [x] **Phase 6: PWA install, offline sync, CSV export** (built 2026-10-15)
   - [x] 6.1 Installable app + offline app shell (manifest, icons, service worker, update banner); E2E: opens
         offline incl. deep links, offline writes upload after reconnect, update banner → Reload
