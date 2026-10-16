@@ -32,7 +32,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,wasm,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,wasm,woff2}'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // the barcode reader (wasm) is ~1.1 MB
         navigateFallback: '/index.html', // any app URL opens offline (SPA routes)
         cleanupOutdatedCaches: true,

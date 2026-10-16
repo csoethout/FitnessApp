@@ -323,7 +323,9 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 
 ## UX notes (owner feedback for the UX pass; add as it comes in)
 - [x] Name + icon: Soev's Strength Lab, owner's logo
-- [ ] Colors from the logo + the owner's home-screen background image (owner sending it next)
+- [x] Sign-in screen = owner's wolf artwork (`public/sign-in.webp`, source in docs/brand; title + tagline are baked
+      into the image, so only an sr-only h1): full-bleed, bottom fade, frosted inputs, off-white wide-tracked SIGN IN
+- [ ] Colors for the rest of the app, from the logo + wolf artwork (monochrome storm palette)
 
 ## Backlog (not in MVP)
 - kg units setting (profile.unit_system exists; replace the lb constants: WEIGHT_UNIT, UNIT in screens, body/plan screens)
