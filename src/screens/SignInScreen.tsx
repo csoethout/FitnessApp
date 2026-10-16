@@ -34,8 +34,9 @@ export function SignInScreen() {
 
   return (
     <div className="mx-auto flex h-full max-w-sm flex-col justify-center px-4">
-      <h1 className="mb-1 text-3xl font-semibold">Lift Log</h1>
-      <p className="mb-8 text-muted">Sign in to continue</p>
+      <img src="/pwa-192.png" alt="" width={112} height={112} className="mx-auto mb-4 size-28 rounded-[24px]" />
+      <h1 className="mb-1 text-center text-3xl font-semibold">Soev's Strength Lab</h1>
+      <p className="mb-8 text-center text-muted">Sign in to continue</p>
 
       {!supabaseConfigured && (
         <p className="mb-4 rounded-xl border border-danger/50 p-3 text-sm text-danger">

@@ -14,11 +14,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt', // a new version waits for "Reload" (src/components/UpdatePrompt.tsx), never mid-set
       injectRegister: false,
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Lift Log',
-        short_name: 'Lift Log',
-        description: 'Workouts, body weight and food, planned for you.',
+        name: "Soev's Strength Lab",
+        short_name: "Soev's Lab", // home-screen label: the full name is cut off on iPhone
+        description: 'Strength · Health · Discipline. Workouts, body weight and food, planned for you.',
         start_url: '/',
         scope: '/',
         display: 'standalone',

@@ -12,8 +12,8 @@ const lb = (kg: number | null) => (kg === null ? null : Math.round(kgToLb(kg) * 
 const r1 = (n: number) => Math.round(n * 10) / 10
 const localTime = (iso: string | null) => (iso ? new Date(iso).toLocaleString('sv-SE').slice(0, 16) : null) // "2026-10-15 07:42"
 
-const README = `Lift Log export
-================
+const README = `Soev's Strength Lab export
+==========================
 Readable files (US units, your local dates and times):
   workouts.csv  one row per workout (duration, sets done, volume in lb)
   sets.csv      one row per completed set (weight in lb; set_type warmup / working / limited = "couldn't finish")
@@ -91,5 +91,5 @@ export async function buildExport(db: LocalDb, userId: string, today = localDate
 
   const zip = zipSync(files, { level: 6 })
   const summary = `${workouts.length} workouts · ${sets.length} sets · ${body.length} weigh-ins · ${food.length} food entries · ${cardio.length} cardio`
-  return { filename: `liftlog-export-${today}.zip`, blob: new Blob([zip], { type: 'application/zip' }), summary }
+  return { filename: `soevs-strength-lab-export-${today}.zip`, blob: new Blob([zip], { type: 'application/zip' }), summary }
 }

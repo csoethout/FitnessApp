@@ -28,7 +28,7 @@ describe('data export', () => {
     await store.insert('cardio_entries', { performed_on: '2026-10-15', activity: 'walk', duration_min: 20, distance_km: 1.609, notes: null })
 
     const out = await buildExport(store.db, 'user-1', '2026-10-15')
-    expect(out.filename).toBe('liftlog-export-2026-10-15.zip')
+    expect(out.filename).toBe('soevs-strength-lab-export-2026-10-15.zip')
     expect(out.summary).toBe('1 workouts · 1 sets · 0 weigh-ins · 1 food entries · 1 cardio')
     const files = unzipSync(new Uint8Array(await out.blob.arrayBuffer()))
     const read = (n: string) => strFromU8(files[n]).trim().split('\r\n')

@@ -1,4 +1,4 @@
-# FitnessApp — project memory
+# Soev's Strength Lab (repo: FitnessApp) — project memory
 
 Personal workout, body-weight and nutrition tracker. Installable PWA, iPhone first.
 This file is the source of truth between sessions: read it first, update it as you go.
@@ -146,6 +146,11 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   targets; lb, miles, local dates) + `raw/<table>.csv` for every synced table (shared exercise library and deleted
   rows left out) + README. Second tap "Save or share" uses the share sheet (iOS needs a fresh tap for it) or a
   download. CSV cells are RFC 4180 and formula-defused (`src/lib/csv.ts`).
+- Branding (UX pass, 2026-10-16): name **Soev's Strength Lab** (home-screen label "Soev's Lab": iOS cuts the full
+  name), tagline "Strength · Health · Discipline". Icon = owner's logo (paw + barbell, distressed white on near-black
+  #090909), source in `docs/brand/`; PNGs in `public/` are the card cropped from the source, grayscale-optimized
+  (180 apple-touch, 192, 512, maskable 512 with the logo in the 80% safe zone, 64 favicon). Colors: next step,
+  chosen from the logo + the owner's home-screen background image.
 - No black screens (owner bug 2026-10-16: home-screen app opened to a black screen, cause unknown — no WebKit here):
   index.html has a plain-JS boot watchdog (#boot-help): if #root is empty after 8 s, or ErrorBoundary / RouteError
   catch a crash, it shows the error text + user agent with Reload and "Reset app" (unregisters the service worker,
@@ -317,7 +322,8 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**
 
 ## UX notes (owner feedback for the UX pass; add as it comes in)
-- (none yet)
+- [x] Name + icon: Soev's Strength Lab, owner's logo
+- [ ] Colors from the logo + the owner's home-screen background image (owner sending it next)
 
 ## Backlog (not in MVP)
 - kg units setting (profile.unit_system exists; replace the lb constants: WEIGHT_UNIT, UNIT in screens, body/plan screens)
@@ -328,5 +334,4 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 - Apple Health / Bluetooth scale sync (not possible from a PWA on iOS; needs native app, $99/yr)
 - Walk/step tracking beyond manual cardio entries; reminders/notifications; supersets; plate calculator
 - Custom domain (≈$10/yr via Cloudflare Registrar — costs money, owner must approve)
-- Final app name / branding ("Lift Log" is a placeholder)
 - Friends/sharing (needs custom SMTP, e.g. Resend free tier); importing old data
