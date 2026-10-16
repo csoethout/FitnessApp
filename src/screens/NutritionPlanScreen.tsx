@@ -11,8 +11,8 @@ import { formatDay } from '@/lib/dates'
 import { ACTIVITY, GOALS, type ActivityLevel, type Adjustments, type GoalType, type Sex } from '@/lib/planner/nutrition'
 import { kgToLb, lbToKg } from '@/lib/units'
 
-// Pre-fill from what the owner told us at the start (CLAUDE.md → Owner profile). Remove before sharing the app.
-const OWNER_DEFAULTS = { sex: 'male' as Sex, birthDate: '2003-04-21', heightIn: 77, weightLb: 210, activity: 'moderate' as ActivityLevel, goal: 'recomp' as GoalType }
+// Neutral starting values for an empty profile (the setup wizard normally fills these in first).
+const DEFAULTS = { heightIn: 69, weightLb: 170, activity: 'moderate' as ActivityLevel, goal: 'recomp' as GoalType }
 
 /** Your nutrition plan: calculated from your details, explained, and fine-tunable with small −/+ nudges. */
 export function NutritionPlanScreen() {
@@ -134,21 +134,24 @@ function Tile({ label, value, unit, big }: { label: string; value: string; unit:
   )
 }
 
-/** Your details. Pre-filled with what you told me; weight is only asked for until you've weighed in. */
+/** Your details. Pre-filled from your profile; weight is only asked for until you've weighed in. */
 function DetailsForm({ state, onDone, firstTime }: { state: PlanState; onDone: () => void; firstTime: boolean }) {
   const { store } = useData()
   const p = state.profile
-  const [sex, setSex] = useState<Sex>(p?.sex ?? OWNER_DEFAULTS.sex)
-  const [birthDate, setBirthDate] = useState(p?.birth_date ?? OWNER_DEFAULTS.birthDate)
-  const startIn = p?.height_cm ? Math.round(p.height_cm / 2.54) : OWNER_DEFAULTS.heightIn
+  const [sex, setSex] = useState<Sex | null>(p?.sex ?? null)
+  const [birthDate, setBirthDate] = useState(p?.birth_date ?? '')
+  const startIn = p?.height_cm ? Math.round(p.height_cm / 2.54) : DEFAULTS.heightIn
   const [feet, setFeet] = useState(Math.floor(startIn / 12))
   const [inches, setInches] = useState(startIn % 12)
-  const [weightLb, setWeightLb] = useState(OWNER_DEFAULTS.weightLb)
-  const [activity, setActivity] = useState<ActivityLevel>(p?.activity_level ?? OWNER_DEFAULTS.activity)
-  const [goal, setGoalType] = useState<GoalType>(state.goal?.goal_type ?? OWNER_DEFAULTS.goal)
+  const [weightLb, setWeightLb] = useState(DEFAULTS.weightLb)
+  const [activity, setActivity] = useState<ActivityLevel>(p?.activity_level ?? DEFAULTS.activity)
+  const [goal, setGoalType] = useState<GoalType>(state.goal?.goal_type ?? DEFAULTS.goal)
   const needsWeight = state.weightKg === null
 
+  const complete = !!sex && !!birthDate
+
   async function save() {
+    if (!complete) return
     const today = localDateKey(new Date())
     await saveProfile(store, { sex, birth_date: birthDate, height_cm: Math.round((feet * 12 + inches) * 2.54 * 10) / 10, activity_level: activity })
     let weightKg = state.weightKg
@@ -165,7 +168,7 @@ function DetailsForm({ state, onDone, firstTime }: { state: PlanState; onDone: (
 
   return (
     <div className="space-y-5">
-      {firstTime && <p className="text-sm text-muted">I've filled in what you told me. Check it, then I'll calculate your targets.</p>}
+      {firstTime && <p className="text-sm text-muted">Fill in your details, then I'll calculate your targets.</p>}
       <div>
         <p className="mb-2 font-semibold">Sex</p>
         <div className="flex gap-2">
@@ -217,7 +220,7 @@ function DetailsForm({ state, onDone, firstTime }: { state: PlanState; onDone: (
           ))}
         </div>
       </div>
-      <button type="button" onClick={() => void save()} className="min-h-14 w-full rounded-xl bg-accent text-lg font-semibold text-accent-ink">
+      <button type="button" disabled={!complete} onClick={() => void save()} className="min-h-14 w-full rounded-xl bg-accent text-lg font-semibold text-accent-ink disabled:opacity-40">
         {firstTime ? 'Calculate my plan' : 'Save'}
       </button>
       {!firstTime && (

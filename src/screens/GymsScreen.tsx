@@ -4,14 +4,10 @@ import { Link, useNavigate } from 'react-router'
 import { Sheet } from '@/components/Sheet'
 import { useData } from '@/data/DataProvider'
 import { useGyms } from '@/data/queries'
+import { GYM_PRESETS } from '@/lib/gyms'
 
 /** Quick starting points for a new gym; you can tick/untick equipment afterwards. */
-const PRESETS: { label: string; equipment: string[] }[] = [
-  { label: 'Hotel gym', equipment: ['dumbbell', 'machine', 'cable', 'body only'] },
-  { label: 'Home', equipment: ['dumbbell', 'bands', 'body only'] },
-  { label: 'Bodyweight only', equipment: ['body only'] },
-  { label: 'Full gym', equipment: ['barbell', 'dumbbell', 'cable', 'machine', 'body only', 'e-z curl bar', 'kettlebells', 'other'] },
-]
+const PRESETS = [GYM_PRESETS[1], GYM_PRESETS[2], GYM_PRESETS[3], GYM_PRESETS[0]] // most common extra gyms first
 
 /** Your gyms: the usual one, plus others (hotel, home…) for Plan my week's Away days. */
 export function GymsScreen() {

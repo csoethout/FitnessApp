@@ -138,6 +138,10 @@ export type ProfileSettings = {
   /** Your own daily water goal in oz (null/missing = calculated from body weight) and your bottle size. */
   waterGoalOz?: number | null
   waterBottleOz?: number
+  /** Local date the setup wizard was finished or skipped (missing = never; new accounts are sent to it). */
+  setupDone?: string
+  /** From the setup wizard: training experience (drives the generated week). */
+  experience?: 'new' | 'returning' | 'experienced'
 }
 
 export type Goal = Owned & {

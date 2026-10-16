@@ -18,6 +18,7 @@ import { GymsScreen } from '@/screens/GymsScreen'
 import { NutritionPlanScreen } from '@/screens/NutritionPlanScreen'
 import { MoreScreen } from '@/screens/MoreScreen'
 import { ProgressScreen } from '@/screens/ProgressScreen'
+import { SetupScreen } from '@/screens/SetupScreen'
 import { SignInScreen } from '@/screens/SignInScreen'
 import { SummaryScreen } from '@/screens/SummaryScreen'
 import { TodayScreen } from '@/screens/TodayScreen'
@@ -53,6 +54,8 @@ const router = createBrowserRouter([
         children: [
           // Full-screen logger: no tab bar, so every pixel goes to the sets.
           { path: '/workout/:workoutId', element: <WorkoutScreen /> },
+          // First-run setup wizard: full screen too.
+          { path: '/setup', element: <SetupScreen /> },
           {
             element: <AppLayout />,
             children: [

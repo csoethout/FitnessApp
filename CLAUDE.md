@@ -339,8 +339,17 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
       first-run and empty states, wording. Work through "UX notes" below.
   - [x] U1 Water + sleep tracking, feature switches (More → Features), Testing tools behind a switch (off by default)
   - [ ] Owner: run `20261017000000_water_sleep.sql` in Supabase SQL Editor (before using water/sleep on the live app)
-  - [ ] U2 Setup wizard for new users (about you, goal, training days/length/style → generated split, gym, features);
-        replaces OWNER_DEFAULTS + the hard-coded starter split for new accounts; re-runnable from More
+  - [x] U2 Setup wizard (`/setup`, `src/screens/SetupScreen.tsx`, data in `src/data/onboarding.ts`): 8 steps —
+        welcome (name, skip), about you (sex, birth date, height, weight if no weigh-in), goal + activity, training
+        (days/week + which days, 30–75 min, experience), gym preset, tour of the 5 tabs, features, summary (targets +
+        generated week; "Keep mine / Use a new one" when a week exists). New accounts are redirected there (AppLayout,
+        `useNeedsSetup`: after first sync, no settings.setupDone, no active week, no workouts); More → Run setup again.
+        Week generator `src/lib/planner/split.ts` (pure, tested against the real library): 2 days full body A/B,
+        3 PPL (new lifters full body A/B/C), 4 upper/lower, 5 U/L/P/P/L, 6 PPL×2; movement slots pick the first
+        exercise the gym has; 30/45/60/75 min → 4/5/6/7 exercises (new −1); main lift 3 sets (4 experienced, ≥60 min),
+        others 2 (3 at ≥60 min); compounds 6–10 (new 8–12), isolation 10–15. Re-running with a new week rewrites the
+        active week's 7 day rows in place (`replaceWeek`). OWNER_DEFAULTS removed (neutral defaults, sex/birth date
+        required); Train's "Use starter split" replaced by "Build a week for me" (→ /setup)
   - [ ] U3 First-time tips on each screen
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**
 
@@ -357,7 +366,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   (sample.ts), profile + recomp goal started 15 days ago (check-in due) + target, 11 everyday foods, "Usual breakfast"
   meal + chili recipe, 14 days of food + today's breakfast, ~6 weeks of walks/Friday runs, next week planned (Tue busy,
   Thu short 30, Sat hotel). The demo login itself is created by the owner in Supabase (Auth → Users → Add user).
-- **Before sharing with anyone:** Testing tools are now behind a feature switch (off by default); still remove OWNER_DEFAULTS in `NutritionPlanScreen.tsx`; (`src/components/TestingTools.tsx`, `src/data/sample.ts`)
+- Before sharing widely: Testing tools are behind a feature switch (off by default); consider removing them entirely (`src/components/TestingTools.tsx`, `src/data/sample.ts`)
 - Suggested workout times from availability blocks (e.g. busy 8am–6pm) + one-off commitments
 - Google Calendar sync (adds OAuth + privacy surface)
 - AI: free-text week check-in ("out of town Fri–Sun, hotel gym")

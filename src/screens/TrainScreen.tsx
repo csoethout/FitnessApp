@@ -8,9 +8,8 @@ import { TodayWorkoutCard } from '@/components/TodayWorkoutCard'
 import { useData } from '@/data/DataProvider'
 import { useFeatures } from '@/data/profile'
 import { useActiveWeek, useDayExerciseCounts } from '@/data/queries'
-import { applyBlankWeek, applyStarterSplit } from '@/data/setup'
+import { applyBlankWeek } from '@/data/setup'
 import { WEEKDAYS } from '@/lib/dates'
-import { STARTER_SPLIT } from '@/lib/starterSplit'
 
 export function TrainScreen() {
   const week = useActiveWeek()
@@ -71,17 +70,11 @@ function SetUpWeek() {
   const { db, store } = useData()
   const libraryCount = useLiveQuery(() => db.exercises.count(), [db]) ?? 0
   const [busy, setBusy] = useState(false)
-  const [note, setNote] = useState<string | null>(null)
   const ready = libraryCount > 0
 
-  async function run(kind: 'starter' | 'blank') {
+  async function blank() {
     setBusy(true)
-    if (kind === 'starter') {
-      const { missing } = await applyStarterSplit(store, STARTER_SPLIT)
-      if (missing.length) setNote(`Skipped ${missing.length} exercise(s) not found in the library.`)
-    } else {
-      await applyBlankWeek(store)
-    }
+    await applyBlankWeek(store)
     setBusy(false)
   }
 
@@ -90,28 +83,25 @@ function SetUpWeek() {
       <div>
         <h2 className="text-lg font-semibold">Set up your week</h2>
         <p className="text-sm text-muted">
-          The starter split matches your schedule: Back &amp; Shoulders, Legs, Chest, Back, Arms &amp; Abs, rest Friday, Full
-          Body. Every exercise can be changed afterwards.
+          Answer a few questions (days, time, gym) and I'll build a week for you. Every exercise can be changed afterwards.
         </p>
       </div>
       {!ready && <p className="text-sm text-amber-400">Downloading the exercise library… (needs a connection the first time)</p>}
-      <button
-        type="button"
-        disabled={!ready || busy}
-        onClick={() => void run('starter')}
-        className="min-h-12 w-full rounded-xl bg-accent font-semibold text-accent-ink disabled:opacity-50"
+      <Link
+        to="/setup"
+        aria-disabled={!ready}
+        className={`flex min-h-12 w-full items-center justify-center rounded-xl bg-accent font-semibold text-accent-ink ${ready ? '' : 'pointer-events-none opacity-50'}`}
       >
-        Use starter split
-      </button>
+        Build a week for me
+      </Link>
       <button
         type="button"
         disabled={!ready || busy}
-        onClick={() => void run('blank')}
+        onClick={() => void blank()}
         className="min-h-12 w-full rounded-xl border border-border bg-surface-2 disabled:opacity-50"
       >
         Start with an empty week
       </button>
-      {note && <p className="text-sm text-muted">{note}</p>}
     </section>
   )
 }

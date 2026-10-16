@@ -1,5 +1,6 @@
 import { ChartLine, Dumbbell, Ellipsis, House, Utensils, type LucideIcon } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router'
+import { Navigate, NavLink, Outlet } from 'react-router'
+import { useNeedsSetup } from '@/data/onboarding'
 import { useFeatures } from '@/data/profile'
 import { TargetKeeper } from './TargetKeeper'
 import { UpdatePrompt } from './UpdatePrompt'
@@ -18,6 +19,8 @@ const tabs: { to: string; label: string; icon: LucideIcon; feature?: 'food' }[] 
  */
 export function AppLayout() {
   const features = useFeatures()
+  // New accounts start with the setup wizard (existing users and anyone who skipped it never see it again).
+  if (useNeedsSetup()) return <Navigate to="/setup" replace />
   return (
     <div className="flex h-full flex-col">
       {features?.food !== false && <TargetKeeper />}

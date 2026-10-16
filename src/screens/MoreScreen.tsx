@@ -1,4 +1,4 @@
-import { ChevronRight, Dumbbell } from 'lucide-react'
+import { ChevronRight, Dumbbell, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '@/auth/AuthProvider'
@@ -54,6 +54,14 @@ export function MoreScreen() {
               {gymInfo?.gym?.name ?? 'Main gym'}
               {gymInfo?.unavailableIds.size ? ` · ${gymInfo.unavailableIds.size} hidden exercise(s)` : ''} · add a hotel or home gym
             </span>
+          </span>
+          <ChevronRight size={20} className="text-muted" aria-hidden />
+        </Link>
+        <Link to="/setup" className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface px-4">
+          <Sparkles size={20} className="text-muted" aria-hidden />
+          <span className="flex-1">
+            Run setup again
+            <span className="block text-xs text-muted">Goal, schedule, gym and features; your current week is kept unless you choose a new one</span>
           </span>
           <ChevronRight size={20} className="text-muted" aria-hidden />
         </Link>
