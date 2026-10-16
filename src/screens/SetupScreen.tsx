@@ -1,6 +1,7 @@
 import { ChevronLeft } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
+import { AreaPicker } from '@/components/AreaPicker'
 import { Stepper } from '@/components/Stepper'
 import { useData } from '@/data/DataProvider'
 import { applySetup, loadEquipmentOf, loadSetupDefaults, skipSetup, type SetupAnswers } from '@/data/onboarding'
@@ -10,11 +11,11 @@ import { WEEKDAYS, WEEKDAYS_SHORT } from '@/lib/dates'
 import { FEATURES } from '@/lib/features'
 import { GYM_PRESETS } from '@/lib/gyms'
 import { ACTIVITY, ageOn, computePlan, GOALS, type ActivityLevel, type GoalType, type Sex } from '@/lib/planner/nutrition'
-import { defaultDays, generateSplit, type EquipmentOf, type Experience } from '@/lib/planner/split'
+import { defaultDays, describeFocus, focusValid, generateSplit, type EquipmentOf, type Experience } from '@/lib/planner/split'
 import { tour } from '@/lib/tour'
 import { lbToKg } from '@/lib/units'
 
-const STEPS = ['Welcome', 'About you', 'Goal', 'Training', 'Gym', 'Features', 'Your plan'] as const
+const STEPS = ['Welcome', 'About you', 'Goal', 'Training', 'Body areas', 'Gym', 'Features', 'Your plan'] as const
 const MINUTES = [30, 45, 60, 75]
 const EXPERIENCE: { key: Experience; label: string; detail: string }[] = [
   { key: 'new', label: 'New to lifting', detail: 'Full-body days, lighter volume, 8–12 reps' },
@@ -56,7 +57,7 @@ function Wizard(props: { answers: SetupAnswers; hasWeek: boolean; hasWeight: boo
 
   const age = a.birthDate ? ageOn(a.birthDate, today) : null
   const ageOk = age !== null && age >= 13 && age <= 100
-  const canNext = [true, !!a.sex && ageOk, true, a.days.length > 0, true, true, true][step]
+  const canNext = [true, !!a.sex && ageOk, true, a.days.length > 0, focusValid(a.focus), true, true, true][step]
   const last = step === STEPS.length - 1
 
   async function finish() {
@@ -102,9 +103,10 @@ function Wizard(props: { answers: SetupAnswers; hasWeek: boolean; hasWeight: boo
         {step === 1 && <AboutYou a={a} set={set} needsWeight={!props.hasWeight} age={age} ageOk={ageOk} />}
         {step === 2 && <GoalStep a={a} set={set} />}
         {step === 3 && <TrainingStep a={a} set={set} />}
-        {step === 4 && <GymStep a={a} set={set} />}
-        {step === 5 && <FeaturesStep a={a} set={set} />}
-        {step === 6 && <Summary a={a} set={set} {...props} today={today} />}
+        {step === 4 && <AreasStep a={a} set={set} />}
+        {step === 5 && <GymStep a={a} set={set} />}
+        {step === 6 && <FeaturesStep a={a} set={set} />}
+        {step === 7 && <Summary a={a} set={set} {...props} today={today} />}
       </main>
 
       <footer className="border-t border-border bg-bg px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
@@ -267,6 +269,19 @@ function TrainingStep({ a, set }: StepProps) {
   )
 }
 
+function AreasStep({ a, set }: StepProps) {
+  return (
+    <>
+      <Title sub="Skip an area and your week leaves it out (no legs = upper-body days only). Focus areas come first in a workout and get an extra set.">
+        What do you want to train?
+      </Title>
+      <AreaPicker value={a.focus} onChange={(focus) => set({ focus })} />
+      {!focusValid(a.focus) && <p className="mt-2 text-sm text-danger">Keep at least one area.</p>}
+      <p className="mt-3 text-xs text-muted">You can change this later on the Train tab.</p>
+    </>
+  )
+}
+
 function GymStep({ a, set }: StepProps) {
   const current = GYM_PRESETS.findIndex((p) => p.equipment.length === a.gymEquipment.length && p.equipment.every((e) => a.gymEquipment.includes(e)))
   return (
@@ -319,8 +334,8 @@ function FeaturesStep({ a, set }: StepProps) {
 function Summary(props: StepProps & { hasWeek: boolean; equipmentOf: EquipmentOf; names: Map<string, string>; today: string }) {
   const { a, set } = props
   const week = useMemo(
-    () => generateSplit({ days: a.days, minutes: a.minutes, experience: a.experience, equipment: a.gymEquipment }, props.equipmentOf),
-    [a.days, a.minutes, a.experience, a.gymEquipment, props.equipmentOf],
+    () => generateSplit({ days: a.days, minutes: a.minutes, experience: a.experience, equipment: a.gymEquipment, focus: a.focus }, props.equipmentOf),
+    [a.days, a.minutes, a.experience, a.gymEquipment, a.focus, props.equipmentOf],
   )
   const plan =
     a.sex && a.birthDate
@@ -354,6 +369,7 @@ function Summary(props: StepProps & { hasWeek: boolean; equipmentOf: EquipmentOf
             </button>
           </div>
           {a.week === 'new' && <p className="mt-2 text-xs text-muted">Your current days are replaced by the ones below. Past workouts are kept.</p>}
+          {a.week === 'keep' && <p className="mt-2 text-xs text-muted">Your days and exercises stay as they are (body area changes apply when you build a new week).</p>}
         </div>
       )}
       {showWeek && (
@@ -361,6 +377,7 @@ function Summary(props: StepProps & { hasWeek: boolean; equipmentOf: EquipmentOf
           <p className="mb-2 font-semibold">
             Your week <span className="text-sm font-normal text-muted">· {a.minutes} min sessions</span>
           </p>
+          {describeFocus(a.focus) && <p className="-mt-1 mb-2 text-sm text-muted">{describeFocus(a.focus)}</p>}
           <ul className="overflow-hidden rounded-2xl border border-border bg-surface">
             {week.map((d) => (
               <li key={d.dayOfWeek} className="border-b border-border px-4 py-3 last:border-b-0">

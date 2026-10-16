@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { resolveFeatures } from '@/lib/features'
 import { GYM_PRESETS } from '@/lib/gyms'
 import { openLocalDb } from './db'
-import { applySetup, loadSetupDefaults } from './onboarding'
+import { applySetup, loadSetupDefaults, saveFocus } from './onboarding'
 import { LocalStore } from './store'
 import type { Exercise } from './types'
 
@@ -80,5 +80,23 @@ describe('setup wizard', () => {
     expect((await store.db.plan_template_exercises.toArray()).filter((e) => !e.deleted_at)).toHaveLength(4 * 6)
     expect(await store.db.body_measurements.count()).toBe(1)
     expect((await store.db.goals.toArray()).map((g) => g.goal_type)).toEqual(['recomp']) // one goal row, changed in place
+  })
+
+  it('Body areas: skipping legs and rebuilding keeps the days but drops leg work', async () => {
+    const store = await setup()
+    const first = await loadSetupDefaults(store.db, store.userId, resolveFeatures(undefined))
+    await applySetup(store, { ...first.answers, sex: 'male', birthDate: '1990-01-01', days: [1, 3, 5], week: 'new', gymEquipment: GYM_PRESETS[0].equipment }, { hasWeight: false })
+    await saveFocus(store, { Legs: 'skip' }, false)
+    expect((await store.db.profiles.get('user-1'))!.settings.trainFocus).toEqual({ Legs: 'skip' })
+    expect((await store.db.plan_template_days.toArray()).map((d) => d.name)).toContain('Legs') // just saved
+
+    await saveFocus(store, { Legs: 'skip' }, true)
+    const days = (await store.db.plan_template_days.toArray()).filter((d) => !d.is_rest)
+    expect(days.map((d) => d.day_of_week).sort()).toEqual([1, 3, 5])
+    expect(days.map((d) => d.name).sort()).toEqual(['Pull', 'Push', 'Upper A'])
+    const names = new Map((await store.db.exercises.toArray()).map((e) => [e.id, e.source_id]))
+    const live = (await store.db.plan_template_exercises.toArray()).filter((e) => !e.deleted_at).map((e) => names.get(e.exercise_id))
+    expect(live).not.toContain('Barbell_Squat')
+    expect(live).not.toContain('Romanian_Deadlift')
   })
 })

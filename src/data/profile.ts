@@ -150,3 +150,9 @@ export async function saveFeature(store: LocalStore, key: FeatureKey, on: boolea
   const settings = (await store.db.profiles.get(store.userId))?.settings ?? {}
   await saveProfile(store, { settings: { ...settings, features: { ...settings.features, [key]: on } } })
 }
+
+/** Your profile row (null if it hasn't downloaded yet). undefined while loading. */
+export function useProfile() {
+  const { db, store } = useData()
+  return useLiveQuery(async () => (await db.profiles.get(store.userId)) ?? null, [db, store.userId])
+}

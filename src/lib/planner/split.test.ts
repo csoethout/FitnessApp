@@ -63,4 +63,40 @@ describe('generateSplit', () => {
     expect(d.exercises[0].reps).toEqual([8, 12])
     expect(d.exercises.filter((e) => !e.main).every((e) => e.sets === 2)).toBe(true)
   })
+
+  it('skipping legs gives upper-body days only, with no leg exercises', () => {
+    const legIds = new Set(['Barbell_Squat', 'Leg_Press', 'Romanian_Deadlift', 'Lying_Leg_Curls', 'Standing_Calf_Raises', 'Dumbbell_Lunges', 'Hack_Squat', 'Leg_Extensions'])
+    for (const n of [2, 3, 4, 6]) {
+      const week = training(generateSplit({ ...base, days: defaultDays(n), focus: { Legs: 'skip' } }, library))
+      expect(week.map((d) => d.name).join()).not.toMatch(/Leg|Lower|Full/)
+      for (const d of week) {
+        expect(d.exercises.some((e) => legIds.has(e.sourceId))).toBe(false)
+        expect(d.exercises.length).toBe(exerciseCount(60, 'returning')) // room is filled with upper-body work
+        expect(d.exercises[0].main).toBe(true)
+      }
+    }
+    expect(training(generateSplit({ ...base, days: defaultDays(3), focus: { Legs: 'skip' } }, library)).map((d) => d.name)).toEqual(['Push', 'Pull', 'Upper A'])
+  })
+
+  it('skipping an area removes it everywhere and still leaves a main lift', () => {
+    const week = training(generateSplit({ ...base, days: defaultDays(4), focus: { Chest: 'skip', Core: 'skip' } }, library))
+    const all = week.flatMap((d) => d.exercises.map((e) => e.sourceId))
+    for (const id of ['Barbell_Bench_Press_-_Medium_Grip', 'Incline_Dumbbell_Press', 'Cable_Crossover', 'Cable_Crunch']) expect(all).not.toContain(id)
+    for (const d of week) expect(d.exercises.filter((e) => e.main).length).toBeGreaterThan(0)
+  })
+
+  it('focus areas come right after the main lifts with an extra set', () => {
+    const plain = training(generateSplit({ ...base, days: defaultDays(4) }, library))[0]
+    const armDay = training(generateSplit({ ...base, days: defaultDays(4), focus: { Arms: 'focus' } }, library))[0]
+    const firstNonMain = armDay.exercises.find((e) => !e.main)!
+    expect(['Triceps_Pushdown_-_Rope_Attachment', 'Barbell_Curl']).toContain(firstNonMain.sourceId)
+    expect(firstNonMain.sets).toBe(4)
+    const armIds = (d: typeof plain) => d.exercises.filter((e) => /Curl|Triceps|Skullcrusher/.test(e.sourceId)).length
+    expect(armIds(armDay)).toBeGreaterThanOrEqual(armIds(plain))
+  })
+
+  it('legs only: every day is a leg day', () => {
+    const week = training(generateSplit({ ...base, days: defaultDays(3), focus: { Chest: 'skip', Back: 'skip', Shoulders: 'skip', Arms: 'skip' } }, library))
+    expect(week.map((d) => d.name)).toEqual(['Lower A', 'Lower B', 'Legs'])
+  })
 })

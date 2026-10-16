@@ -142,6 +142,8 @@ export type ProfileSettings = {
   setupDone?: string
   /** From the setup wizard: training experience (drives the generated week). */
   experience?: 'new' | 'returning' | 'experienced'
+  /** Body areas to skip or focus on when a week is built (missing = normal). See src/lib/planner/split.ts. */
+  trainFocus?: Partial<Record<'Chest' | 'Back' | 'Shoulders' | 'Arms' | 'Legs' | 'Core', 'skip' | 'normal' | 'focus'>>
 }
 
 export type Goal = Owned & {

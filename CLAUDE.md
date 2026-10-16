@@ -339,9 +339,9 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
       first-run and empty states, wording. Work through "UX notes" below.
   - [x] U1 Water + sleep tracking, feature switches (More → Features), Testing tools behind a switch (off by default)
   - [ ] Owner: run `20261017000000_water_sleep.sql` in Supabase SQL Editor (before using water/sleep on the live app)
-  - [x] U2 Setup wizard (`/setup`, `src/screens/SetupScreen.tsx`, data in `src/data/onboarding.ts`): 7 steps —
+  - [x] U2 Setup wizard (`/setup`, `src/screens/SetupScreen.tsx`, data in `src/data/onboarding.ts`): 8 steps —
         welcome (name, skip), about you (sex, birth date, height, weight if no weigh-in), goal + activity, training
-        (days/week + which days, 30–75 min, experience), gym preset, features, summary (targets +
+        (days/week + which days, 30–75 min, experience), body areas, gym preset, features, summary (targets +
         generated week; "Keep mine / Use a new one" when a week exists). Reruns (setupDone or a week exists) get a Close button → More. New accounts are redirected there (AppLayout,
         `useNeedsSetup`: after first sync, no settings.setupDone, no active week, no workouts); More → Run setup again.
         Week generator `src/lib/planner/split.ts` (pure, tested against the real library): 2 days full body A/B,
@@ -357,6 +357,15 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         (huge box-shadow hole + accent ring), bubble below/above/bottom with Back / Next / Skip; taps outside are
         blocked. Starts after Finish setup; More → Take the tour. The setup wizard's text "How the app works" step
         was removed (7 steps now). Test: every target is tagged in src.
+  - [x] U2c Body areas (tester request: "can I say I don't want to do legs?"): Chest/Back/Shoulders/Arms/Legs/Core,
+        each Skip / Normal / Focus, stored in profile.settings.trainFocus. Setup step "Body areas" (wizard now 8 steps)
+        and Train → Body areas (`/train/areas`: "Save and rebuild my week" = same days/time/experience/gym from your
+        profile, exercises replaced via replaceWeek; or "Just save"). Generator (`split.ts`): slots are tagged with an
+        area; skipped areas are dropped everywhere; Legs skipped → upper-only weeks (2 Upper A/B, 3 Push/Pull/Upper A,
+        4 +Upper B, 5–6 + Push B/Pull B); all upper areas skipped → Lower A/Lower B/Legs; room left is filled with
+        EXTRA slots for the areas trained that day (focus first); focus areas come right after the main lifts with
+        +1 set (max 4); if the main lift's area is skipped, the first compound left becomes the main lift.
+        At least one area must stay. Tour has a Body areas stop.
   - [ ] U3 First-time tips on each screen (maybe unnecessary now that the tour exists; ask owner)
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**
 

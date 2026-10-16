@@ -1,15 +1,16 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { CalendarDays, ChevronRight } from 'lucide-react'
+import { CalendarDays, ChevronRight, Target } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { HistoryList } from '@/components/HistoryList'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { TodayWorkoutCard } from '@/components/TodayWorkoutCard'
 import { useData } from '@/data/DataProvider'
-import { useFeatures } from '@/data/profile'
+import { useFeatures, useProfile } from '@/data/profile'
 import { useActiveWeek, useDayExerciseCounts } from '@/data/queries'
 import { applyBlankWeek } from '@/data/setup'
 import { WEEKDAYS } from '@/lib/dates'
+import { describeFocus } from '@/lib/planner/split'
 
 export function TrainScreen() {
   const week = useActiveWeek()
@@ -38,6 +39,7 @@ function WeekOverview({ days }: { days: NonNullable<ReturnType<typeof useActiveW
           <ChevronRight className="text-muted" size={20} aria-hidden />
         </Link>
       )}
+      <AreasCard />
       <ul data-tour="train-week" className="overflow-hidden rounded-2xl border border-border bg-surface">
         {days.map((d) => (
           <li key={d.id} className="border-b border-border last:border-b-0">
@@ -103,5 +105,22 @@ function SetUpWeek() {
         Start with an empty week
       </button>
     </section>
+  )
+}
+
+/** Which body areas the week skips or focuses on; opens Body areas to change them. */
+function AreasCard() {
+  const profile = useProfile()
+  if (profile === undefined) return null
+  const summary = describeFocus(profile?.settings?.trainFocus)
+  return (
+    <Link to="/train/areas" data-tour="train-areas" className="flex min-h-14 items-center gap-3 rounded-2xl border border-border bg-surface px-4">
+      <Target size={20} className="text-accent" />
+      <span className="flex-1">
+        <span className="block font-medium">Body areas</span>
+        <span className="block text-xs text-muted">{summary ?? 'Training everything. Skip or focus on an area.'}</span>
+      </span>
+      <ChevronRight className="text-muted" size={20} aria-hidden />
+    </Link>
   )
 }

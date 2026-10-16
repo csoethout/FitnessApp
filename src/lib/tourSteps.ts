@@ -13,6 +13,7 @@ export const TOUR_STEPS: TourStep[] = [
   { route: '/', target: 'today-cardio', title: 'Cardio', text: '"Walk" repeats your usual walk in one tap. "Other" is for runs, bikes and anything else.', feature: 'cardio' },
   { route: '/', target: 'today-food', title: 'Food at a glance', text: 'Calories and protein left for today. Tap it to open the food log.', feature: 'food' },
   { route: '/train', target: 'train-week', title: 'Your week', text: 'Your training days. Tap a day to change exercises, sets, reps or the main lift.' },
+  { route: '/train', target: 'train-areas', title: 'Body areas', text: "Don't want to train legs, or want more arms? Skip or focus on an area and rebuild your week around it." },
   { route: '/train', target: 'train-plan-week', title: 'Plan my week', text: 'Busy day, short on time, or travelling? Mark it here and the week rearranges itself.', feature: 'planWeek' },
   { route: '/train', target: 'train-history', title: 'Past workouts', text: 'Every finished workout, with PRs and your estimated 1-rep max per lift.' },
   { route: '/food', target: 'food-meters', title: 'Calories and protein', text: 'How much is left today. Carbs and fat are underneath; protein matters most.', feature: 'food' },

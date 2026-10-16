@@ -1,8 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { localDateKey, rollingAverage } from '@/lib/body'
-import type { Features } from '@/lib/features'
+import { resolveFeatures, type Features } from '@/lib/features'
 import type { ActivityLevel, GoalType, Sex } from '@/lib/planner/nutrition'
-import { generateSplit, type EquipmentOf, type Experience } from '@/lib/planner/split'
+import { generateSplit, type EquipmentOf, type Experience, type Focus } from '@/lib/planner/split'
 import { kgToLb, lbToKg } from '@/lib/units'
 import { saveWeighIn } from './body'
 import { useData, useFirstSyncDone } from './DataProvider'
@@ -23,6 +23,7 @@ export type SetupAnswers = {
   days: number[]
   minutes: number
   experience: Experience
+  focus: Focus
   gymEquipment: string[]
   features: Features
   week: 'new' | 'keep' // keep = leave an existing weekly plan alone
@@ -50,6 +51,7 @@ export async function loadSetupDefaults(db: LocalDb, userId: string, features: F
     days: trainingDays.length ? trainingDays.sort() : [1, 3, 5],
     minutes: profile?.session_minutes_max ?? 60,
     experience: profile?.settings?.experience ?? 'returning',
+    focus: profile?.settings?.trainFocus ?? {},
     gymEquipment: gym?.equipment ?? [],
     features,
     week: template ? 'keep' : 'new',
@@ -73,7 +75,7 @@ export async function applySetup(store: LocalStore, a: SetupAnswers, opts: { has
     display_name: a.name.trim() || null, sex: a.sex, birth_date: a.birthDate || null,
     height_cm: Math.round(a.heightIn * 2.54 * 10) / 10, activity_level: a.activity,
     session_minutes_min: a.minutes, session_minutes_max: a.minutes,
-    settings: { ...settings, features: { ...settings.features, ...a.features }, experience: a.experience, setupDone: today },
+    settings: { ...settings, features: { ...settings.features, ...a.features }, experience: a.experience, trainFocus: a.focus, setupDone: today },
   })
   let weightKg: number | null = null
   if (!opts.hasWeight) {
@@ -86,7 +88,7 @@ export async function applySetup(store: LocalStore, a: SetupAnswers, opts: { has
   if (a.gymEquipment.length) await store.update('equipment_profiles', gymId, { equipment: a.gymEquipment })
 
   if (a.week === 'new') {
-    const week = generateSplit({ days: a.days, minutes: a.minutes, experience: a.experience, equipment: a.gymEquipment }, await loadEquipmentOf(db))
+    const week = generateSplit({ days: a.days, minutes: a.minutes, experience: a.experience, equipment: a.gymEquipment, focus: a.focus }, await loadEquipmentOf(db))
     await replaceWeek(store, week)
   }
 }
@@ -115,4 +117,18 @@ export function useNeedsSetup(): boolean | undefined {
     if ((await db.plan_templates.toArray()).some((t) => t.is_active && !t.deleted_at)) return false
     return !(await db.workouts.toArray()).some((w) => !w.deleted_at)
   }, [db, store.userId, synced])
+}
+
+/**
+ * Train → Body areas: save the areas and, if asked, rebuild the week from your setup answers (days, time,
+ * experience, usual gym) with the new areas. Rebuilding replaces the exercises in your weekly plan.
+ */
+export async function saveFocus(store: LocalStore, focus: Focus, rebuild: boolean) {
+  const { db } = store
+  const settings = (await db.profiles.get(store.userId))?.settings ?? {}
+  await saveProfile(store, { settings: { ...settings, trainFocus: focus } })
+  if (!rebuild) return
+  const { answers } = await loadSetupDefaults(db, store.userId, resolveFeatures(settings.features))
+  const week = generateSplit({ days: answers.days, minutes: answers.minutes, experience: answers.experience, equipment: answers.gymEquipment, focus }, await loadEquipmentOf(db))
+  await replaceWeek(store, week)
 }
