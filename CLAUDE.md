@@ -309,7 +309,8 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] 6.1 Installable app + offline app shell (manifest, icons, service worker, update banner); E2E: opens
         offline incl. deep links, offline writes upload after reconnect, update banner → Reload
   - [x] 6.2 CSV export of all data (zip of readable + raw CSVs, share sheet / download)
-  - [ ] Owner: re-add the app to the Home Screen (new icon), test offline + export on iPhone
+  - [x] Owner: installed to the Home Screen (2026-10-16), working
+  - [ ] Owner: test offline (Airplane Mode) + export on iPhone
 - [ ] **UX pass** (after Phase 6, owner agreed): navigation/layout, look (colors, type, spacing), name + icon,
       first-run and empty states, wording. Work through "UX notes" below.
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**
