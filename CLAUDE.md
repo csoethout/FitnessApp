@@ -339,9 +339,9 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
       first-run and empty states, wording. Work through "UX notes" below.
   - [x] U1 Water + sleep tracking, feature switches (More → Features), Testing tools behind a switch (off by default)
   - [ ] Owner: run `20261017000000_water_sleep.sql` in Supabase SQL Editor (before using water/sleep on the live app)
-  - [x] U2 Setup wizard (`/setup`, `src/screens/SetupScreen.tsx`, data in `src/data/onboarding.ts`): 8 steps —
+  - [x] U2 Setup wizard (`/setup`, `src/screens/SetupScreen.tsx`, data in `src/data/onboarding.ts`): 7 steps —
         welcome (name, skip), about you (sex, birth date, height, weight if no weigh-in), goal + activity, training
-        (days/week + which days, 30–75 min, experience), gym preset, tour of the 5 tabs, features, summary (targets +
+        (days/week + which days, 30–75 min, experience), gym preset, features, summary (targets +
         generated week; "Keep mine / Use a new one" when a week exists). Reruns (setupDone or a week exists) get a Close button → More. New accounts are redirected there (AppLayout,
         `useNeedsSetup`: after first sync, no settings.setupDone, no active week, no workouts); More → Run setup again.
         Week generator `src/lib/planner/split.ts` (pure, tested against the real library): 2 days full body A/B,
@@ -350,7 +350,14 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
         others 2 (3 at ≥60 min); compounds 6–10 (new 8–12), isolation 10–15. Re-running with a new week rewrites the
         active week's 7 day rows in place (`replaceWeek`). OWNER_DEFAULTS removed (neutral defaults, sex/birth date
         required); Train's "Use starter split" replaced by "Build a week for me" (→ /setup)
-  - [ ] U3 First-time tips on each screen
+  - [x] U2b Guided tour (owner: "move through the screens and highlight things"): `src/components/Tour.tsx`
+        (overlay in AppLayout), steps are data in `src/lib/tourSteps.ts` (route + `data-tour` target + text; steps for
+        switched-off features skipped; missing element → bubble without highlight), state in `src/lib/tour.ts`
+        (module store so /setup can start it). Opens each tab, scrolls the element into view, dims everything else
+        (huge box-shadow hole + accent ring), bubble below/above/bottom with Back / Next / Skip; taps outside are
+        blocked. Starts after Finish setup; More → Take the tour. The setup wizard's text "How the app works" step
+        was removed (7 steps now). Test: every target is tagged in src.
+  - [ ] U3 First-time tips on each screen (maybe unnecessary now that the tour exists; ask owner)
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**
 
 ## UX notes (owner feedback for the UX pass; add as it comes in)

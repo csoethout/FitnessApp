@@ -27,7 +27,7 @@ export function CardioCard() {
   const walk = lastWalk ? { duration_min: lastWalk.duration_min, distance_km: lastWalk.distance_km } : DEFAULT_WALK
 
   return (
-    <section className="rounded-2xl border border-border bg-surface p-4" aria-label="Cardio">
+    <section className="rounded-2xl border border-border bg-surface p-4" aria-label="Cardio" data-tour="today-cardio">
       <div className="flex items-baseline justify-between">
         <h2 className="flex items-center gap-2 font-semibold">
           <Footprints size={18} className="text-accent" /> Cardio

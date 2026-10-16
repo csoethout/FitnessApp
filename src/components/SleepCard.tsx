@@ -18,7 +18,7 @@ export function SleepCard() {
   const avg = sleepAverage(nights, addDaysKey(today, -6), today)
 
   return (
-    <section className="rounded-2xl border border-border bg-surface p-4" aria-label="Sleep">
+    <section className="rounded-2xl border border-border bg-surface p-4" aria-label="Sleep" data-tour="today-sleep">
       <div className="flex items-baseline justify-between">
         <h2 className="flex items-center gap-2 font-semibold">
           <Moon size={18} className="text-accent" /> Sleep

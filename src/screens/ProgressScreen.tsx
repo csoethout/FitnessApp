@@ -26,7 +26,7 @@ export function ProgressScreen() {
     <>
       <ScreenHeader title="Progress" />
       {bodyTab && (
-        <div role="tablist" className="mb-4 grid grid-cols-2 rounded-xl bg-surface p-1">
+        <div role="tablist" data-tour="progress-tabs" className="mb-4 grid grid-cols-2 rounded-xl bg-surface p-1">
           {(['strength', 'body'] as const).map((t) => (
             <button
               key={t}
@@ -144,7 +144,7 @@ function Strength() {
         onSelect={(g) => pick(g === group ? null : g, g !== group)}
       />
       <VolumeWeeks weeks={model.volume} />
-      <section ref={liftsRef} className="scroll-mt-4">
+      <section ref={liftsRef} data-tour="progress-lifts" className="scroll-mt-4">
         <h2 className="mb-2 px-1 font-semibold">Your lifts</h2>
         <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4">
           <button type="button" aria-pressed={group === null} onClick={() => pick(null)} className={chip(group === null)}>
@@ -224,7 +224,7 @@ function ThisWeek(props: {
   const max = Math.max(SET_TARGET + 4, ...muscles.map((m) => m.sets))
   const pct = prevWeek > 0 ? Math.round(((thisWeek - prevWeek) / prevWeek) * 100) : null
   return (
-    <section className="rounded-2xl border border-border bg-surface p-4">
+    <section data-tour="progress-week" className="rounded-2xl border border-border bg-surface p-4">
       <div className="mb-3 flex items-baseline justify-between">
         <h2 className="font-semibold">This week</h2>
         <p className="text-sm text-muted">

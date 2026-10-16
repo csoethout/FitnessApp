@@ -21,7 +21,7 @@ export function WaterCard() {
   const btn = 'flex min-h-12 flex-1 items-center justify-center gap-1 rounded-xl border border-border text-sm font-medium'
 
   return (
-    <section className="rounded-2xl border border-border bg-surface p-4" aria-label="Water">
+    <section className="rounded-2xl border border-border bg-surface p-4" aria-label="Water" data-tour="today-water">
       <div className="flex items-baseline justify-between">
         <h2 className="flex items-center gap-2 font-semibold">
           <GlassWater size={18} className="text-accent" /> Water

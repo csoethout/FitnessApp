@@ -1,4 +1,4 @@
-import { ChevronRight, Dumbbell, Sparkles } from 'lucide-react'
+import { ChevronRight, Dumbbell, Map as MapIcon, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '@/auth/AuthProvider'
@@ -10,6 +10,7 @@ import { TestingTools } from '@/components/TestingTools'
 import { useData } from '@/data/DataProvider'
 import { saveAppSetting, saveFeature, useAppSettings, useFeatures, type AppSettings } from '@/data/profile'
 import { FEATURES } from '@/lib/features'
+import { tour } from '@/lib/tour'
 import { useMainGym } from '@/data/queries'
 import { supabase } from '@/lib/supabase'
 
@@ -57,7 +58,7 @@ export function MoreScreen() {
           </span>
           <ChevronRight size={20} className="text-muted" aria-hidden />
         </Link>
-        <Link to="/setup" className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface px-4">
+        <Link to="/setup" data-tour="more-setup" className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface px-4">
           <Sparkles size={20} className="text-muted" aria-hidden />
           <span className="flex-1">
             Run setup again
@@ -65,6 +66,14 @@ export function MoreScreen() {
           </span>
           <ChevronRight size={20} className="text-muted" aria-hidden />
         </Link>
+        <button type="button" onClick={() => tour.start()} className="flex min-h-16 w-full items-center gap-3 rounded-2xl border border-border bg-surface px-4 text-left">
+          <MapIcon size={20} className="text-muted" aria-hidden />
+          <span className="flex-1">
+            Take the tour
+            <span className="block text-xs text-muted">A one-minute walk through every tab</span>
+          </span>
+          <ChevronRight size={20} className="text-muted" aria-hidden />
+        </button>
         <WorkoutSettings />
         <FeatureSwitches />
         <ExportCard />
@@ -104,7 +113,7 @@ function FeatureSwitches() {
   const features = useFeatures()
   if (!features) return null
   return (
-    <section className="divide-y divide-border rounded-2xl border border-border bg-surface" aria-label="Features">
+    <section className="divide-y divide-border rounded-2xl border border-border bg-surface" aria-label="Features" data-tour="more-features">
       <h2 className="px-4 pt-3 pb-2 text-sm font-semibold text-muted">
         Features <span className="font-normal">· off = hidden, your data is kept</span>
       </h2>

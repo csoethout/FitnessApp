@@ -55,7 +55,7 @@ export function TodayWorkoutCard() {
   }
 
   return (
-    <section className="rounded-2xl border border-border bg-surface p-4">
+    <section data-tour="today-workout" className="rounded-2xl border border-border bg-surface p-4">
       <p className="text-sm text-muted">Today</p>
       {!week.template ? (
         <p className="text-lg">Set up your week on the Train tab.</p>

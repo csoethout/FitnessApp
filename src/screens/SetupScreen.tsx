@@ -1,4 +1,4 @@
-import { ChartLine, ChevronLeft, Dumbbell, Ellipsis, House, Utensils, type LucideIcon } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { Stepper } from '@/components/Stepper'
@@ -11,21 +11,15 @@ import { FEATURES } from '@/lib/features'
 import { GYM_PRESETS } from '@/lib/gyms'
 import { ACTIVITY, ageOn, computePlan, GOALS, type ActivityLevel, type GoalType, type Sex } from '@/lib/planner/nutrition'
 import { defaultDays, generateSplit, type EquipmentOf, type Experience } from '@/lib/planner/split'
+import { tour } from '@/lib/tour'
 import { lbToKg } from '@/lib/units'
 
-const STEPS = ['Welcome', 'About you', 'Goal', 'Training', 'Gym', 'The app', 'Features', 'Your plan'] as const
+const STEPS = ['Welcome', 'About you', 'Goal', 'Training', 'Gym', 'Features', 'Your plan'] as const
 const MINUTES = [30, 45, 60, 75]
 const EXPERIENCE: { key: Experience; label: string; detail: string }[] = [
   { key: 'new', label: 'New to lifting', detail: 'Full-body days, lighter volume, 8–12 reps' },
   { key: 'returning', label: 'Coming back', detail: "I've lifted before and know the main exercises" },
   { key: 'experienced', label: 'Experienced', detail: 'Training steadily for a year or more' },
-]
-const TOUR: { icon: LucideIcon; tab: string; text: string }[] = [
-  { icon: House, tab: 'Today', text: "Today's workout with one Start button, plus quick cards: weigh-in, sleep, water, cardio and food." },
-  { icon: Dumbbell, tab: 'Train', text: 'Your weekly plan (tap a day to change exercises), Plan my week for busy or travel days, and past workouts.' },
-  { icon: Utensils, tab: 'Food', text: 'Log meals from recent foods, search, barcode scan or the label. Your calorie and protein targets live here.' },
-  { icon: ChartLine, tab: 'Progress', text: 'Strength trends and PRs per lift, sets per muscle, and your body weight and sleep.' },
-  { icon: Ellipsis, tab: 'More', text: 'Gyms, workout settings, switching features on or off, exporting your data, and this setup again.' },
 ]
 
 /**
@@ -62,13 +56,14 @@ function Wizard(props: { answers: SetupAnswers; hasWeek: boolean; hasWeight: boo
 
   const age = a.birthDate ? ageOn(a.birthDate, today) : null
   const ageOk = age !== null && age >= 13 && age <= 100
-  const canNext = [true, !!a.sex && ageOk, true, a.days.length > 0, true, true, true, true][step]
+  const canNext = [true, !!a.sex && ageOk, true, a.days.length > 0, true, true, true][step]
   const last = step === STEPS.length - 1
 
   async function finish() {
     setSaving(true)
     await applySetup(store, a, { hasWeight: props.hasWeight })
     navigate('/', { replace: true })
+    tour.start() // then show them around the real screens
   }
   async function skip() {
     await skipSetup(store)
@@ -108,9 +103,8 @@ function Wizard(props: { answers: SetupAnswers; hasWeek: boolean; hasWeight: boo
         {step === 2 && <GoalStep a={a} set={set} />}
         {step === 3 && <TrainingStep a={a} set={set} />}
         {step === 4 && <GymStep a={a} set={set} />}
-        {step === 5 && <TourStep />}
-        {step === 6 && <FeaturesStep a={a} set={set} />}
-        {step === 7 && <Summary a={a} set={set} {...props} today={today} />}
+        {step === 5 && <FeaturesStep a={a} set={set} />}
+        {step === 6 && <Summary a={a} set={set} {...props} today={today} />}
       </main>
 
       <footer className="border-t border-border bg-bg px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
@@ -158,7 +152,7 @@ function Welcome({ a, set, onSkip }: StepProps & { onSkip: () => void }) {
   return (
     <>
       <img src="/pwa-192.png" alt="" className="mx-auto mb-4 size-24 rounded-3xl" />
-      <Title sub="A few quick questions (about 2 minutes). I'll build your first training week and your calorie and protein targets, and show you around.">
+      <Title sub="A few quick questions (about 2 minutes). I'll build your first training week and your calorie and protein targets, then show you around the app.">
         Welcome to Soev's Strength Lab
       </Title>
       <label className="block">
@@ -287,29 +281,6 @@ function GymStep({ a, set }: StepProps) {
         ))}
         {current < 0 && <p className="text-xs text-muted">Your gym's current equipment is kept unless you pick one of these.</p>}
       </div>
-    </>
-  )
-}
-
-function TourStep() {
-  return (
-    <>
-      <Title sub="Five tabs along the bottom, where your thumb is.">How the app works</Title>
-      <ul className="space-y-3">
-        {TOUR.map(({ icon: Icon, tab, text }) => (
-          <li key={tab} className="flex gap-3 rounded-2xl border border-border bg-surface p-4">
-            <Icon size={24} className="shrink-0 text-accent" aria-hidden />
-            <span>
-              <span className="block font-semibold">{tab}</span>
-              <span className="block text-sm text-muted">{text}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-4 text-sm text-muted">
-        In a workout: sets are pre-filled with today's target. Tap ✓ to log a set as is, or the numbers to change them. Everything saves on your phone
-        first, so bad gym Wi-Fi is fine.
-      </p>
     </>
   )
 }

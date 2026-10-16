@@ -12,7 +12,7 @@ export function TodayFoodCard() {
   const eaten = useMemo(() => sumMacros((entries ?? []).map(entryMacros)), [entries])
   if (entries === undefined || target === undefined) return null
   return (
-    <Link to="/food" className="block rounded-2xl border border-border bg-surface p-4">
+    <Link to="/food" data-tour="today-food" className="block rounded-2xl border border-border bg-surface p-4">
       <p className="text-sm text-muted">Food</p>
       {target ? (
         <div className="mt-1 grid grid-cols-2 gap-2">

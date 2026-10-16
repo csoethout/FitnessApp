@@ -3,6 +3,7 @@ import { Navigate, NavLink, Outlet } from 'react-router'
 import { useNeedsSetup } from '@/data/onboarding'
 import { useFeatures } from '@/data/profile'
 import { TargetKeeper } from './TargetKeeper'
+import { TourOverlay } from './Tour'
 import { UpdatePrompt } from './UpdatePrompt'
 
 const tabs: { to: string; label: string; icon: LucideIcon; feature?: 'food' }[] = [
@@ -28,7 +29,8 @@ export function AppLayout() {
         <UpdatePrompt />
         <Outlet />
       </main>
-      <nav className="border-t border-border bg-surface pb-[env(safe-area-inset-bottom)]">
+      <TourOverlay />
+      <nav data-tour="nav" className="border-t border-border bg-surface pb-[env(safe-area-inset-bottom)]">
         <ul className="mx-auto flex max-w-lg">
           {tabs.filter((t) => !t.feature || features?.[t.feature] !== false).map(({ to, label, icon: Icon }) => (
             <li key={to} className="flex-1">

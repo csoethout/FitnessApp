@@ -62,7 +62,7 @@ export function FoodScreen() {
         <Link to="/food/meals" aria-label="Saved meals" className="grid size-12 place-items-center text-muted">
           <UtensilsCrossed size={22} />
         </Link>
-        <Link to="/food/plan" aria-label="Your nutrition plan" className="grid size-12 place-items-center text-muted">
+        <Link to="/food/plan" aria-label="Your nutrition plan" data-tour="food-plan" className="grid size-12 place-items-center text-muted">
           <Target size={22} />
         </Link>
       </header>
@@ -74,7 +74,9 @@ export function FoodScreen() {
         </Link>
       ) : null}
       {date === today && planState && <CheckInCard state={planState} />}
-      <MacroBars eaten={totals} target={target} />
+      <div data-tour="food-meters">
+        <MacroBars eaten={totals} target={target} />
+      </div>
       {extras.length > 0 && (
         <p className="mt-2 text-center text-xs text-muted">
           {extras.map((x) => `${x.label} ${x.unit === 'g' && x.total < 10 ? Math.round(x.total * 10) / 10 : Math.round(x.total).toLocaleString()} ${x.unit}`).join(' · ')}
@@ -96,7 +98,7 @@ export function FoodScreen() {
           const list = entries.filter((e) => e.meal_slot === slot)
           const meal = sumMacros(list.map(entryMacros))
           return (
-            <section key={slot} className="rounded-2xl border border-border bg-surface">
+            <section key={slot} data-tour={slot === MEAL_SLOTS[0].slot ? 'food-add' : undefined} className="rounded-2xl border border-border bg-surface">
               <div className="flex items-center gap-2 px-4 pt-3">
                 <h2 className="flex-1 font-semibold">{mealLabel}</h2>
                 {list.length > 0 && <span className="text-sm text-muted tabular-nums">{Math.round(meal.kcal)} kcal</span>}

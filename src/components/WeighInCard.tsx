@@ -18,7 +18,7 @@ export function WeighInCard() {
   const avg = rollingAverage(entries.filter((e) => e.weight_kg !== null).map((e) => ({ date: e.measured_on, value: e.weight_kg! }))).at(-1)
 
   return (
-    <section className="rounded-2xl border border-border bg-surface p-4">
+    <section data-tour="today-weight" className="rounded-2xl border border-border bg-surface p-4">
       <p className="text-sm text-muted">Body weight</p>
       {todayEntry ? (
         <button type="button" onClick={() => setOpen(true)} className="mt-1 flex w-full items-end justify-between text-left">
