@@ -65,5 +65,10 @@ export function openLocalDb(userId: string): LocalDb {
   db.version(6).stores({
     cardio_entries: 'id, performed_on',
   })
+  // v7 (UX pass): water and sleep.
+  db.version(7).stores({
+    water_entries: 'id, logged_on',
+    sleep_entries: 'id, wake_date',
+  })
   return db
 }

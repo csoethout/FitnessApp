@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useData } from '@/data/DataProvider'
 import { fillDemoAccount } from '@/data/demo'
-import { deleteAllCardio, deleteAllFoodLog, deleteAllWeighIns, deleteAllWorkouts } from '@/data/sample'
+import { deleteAllCardio, deleteAllFoodLog, deleteAllWaterAndSleep, deleteAllWeighIns, deleteAllWorkouts } from '@/data/sample'
 import { restTimer } from '@/lib/restTimer'
 import { useConfirm } from './ConfirmProvider'
 
@@ -56,7 +56,7 @@ export function TestingTools() {
               const ok = await confirm({
                 title: 'Delete ALL logged data?',
                 message:
-                  'Every workout, weigh-in, cardio and food log entry, real or sample, is removed from this phone and from your account. Your weekly plan, gyms, saved foods and meals, and targets are kept. This cannot be undone.',
+                  'Every workout, weigh-in, cardio, water, sleep and food log entry, real or sample, is removed from this phone and from your account. Your weekly plan, gyms, saved foods and meals, and targets are kept. This cannot be undone.',
                 confirmLabel: 'Delete everything logged',
                 danger: true,
               })
@@ -65,8 +65,9 @@ export function TestingTools() {
               const w = await deleteAllWeighIns(store)
               const f = await deleteAllFoodLog(store)
               const c = await deleteAllCardio(store)
+              const ws = await deleteAllWaterAndSleep(store)
               restTimer.skip()
-              return `Deleted ${n} workouts, ${w} weigh-ins, ${f} food entries and ${c} cardio entries.`
+              return `Deleted ${n} workouts, ${w} weigh-ins, ${f} food entries ${c} cardio entries and ${ws} water/sleep entries.`
             })
           }
           className="min-h-12 w-full rounded-xl border border-danger/50 text-danger disabled:opacity-50"

@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { localDateKey, rollingAverage } from '@/lib/body'
 import { checkInDue, checkInTotal, suggestCheckIn, type CheckIn, type CheckInSuggestion } from '@/lib/planner/checkIn'
 import { ageOn, computePlan, GOALS, type Adjustments, type GoalType, type NutritionPlan, type PlanInputs } from '@/lib/planner/nutrition'
+import { resolveFeatures, type FeatureKey, type Features } from '@/lib/features'
 import { useData } from './DataProvider'
 import type { LocalDb } from './db'
 import type { LocalStore } from './store'
@@ -137,4 +138,15 @@ export function useAppSettings(): AppSettings | undefined {
 export async function saveAppSetting(store: LocalStore, changes: Partial<AppSettings>) {
   const profile = await store.db.profiles.get(store.userId)
   await saveProfile(store, { settings: { ...(profile?.settings ?? {}), ...changes } })
+}
+
+/** Which parts of the app are switched on (defaults filled in). undefined while loading. */
+export function useFeatures(): Features | undefined {
+  const { db, store } = useData()
+  return useLiveQuery(async () => resolveFeatures((await db.profiles.get(store.userId))?.settings?.features), [db, store.userId])
+}
+
+export async function saveFeature(store: LocalStore, key: FeatureKey, on: boolean) {
+  const settings = (await store.db.profiles.get(store.userId))?.settings ?? {}
+  await saveProfile(store, { settings: { ...settings, features: { ...settings.features, [key]: on } } })
 }

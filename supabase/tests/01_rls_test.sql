@@ -65,6 +65,11 @@ insert into public.foods (id, owner_id, name, kcal) values
 insert into public.body_measurements (measured_on, weight_kg, body_fat_pct) values ('2026-10-14', 95.25, 18.5);
 insert into public.food_log_entries (logged_on, name, kcal_per_serving, food_id)
   values ('2026-10-14', 'Chicken breast', 165, 'ffffffff-0000-0000-0000-000000000001');
+insert into public.water_entries (logged_on, amount_ml) values ('2026-10-14', 473);
+insert into public.sleep_entries (wake_date, bed_time, wake_time, duration_min, quality) values ('2026-10-14', '23:15', '06:45', 450, 4);
+select tests.fails($$insert into public.water_entries (logged_on, amount_ml) values ('2026-10-14', 0)$$, 'water amount must be positive');
+select tests.fails($$insert into public.sleep_entries (wake_date, bed_time, wake_time, duration_min) values ('2026-10-14', '23:00', '07:00', 480)$$,
+  'one sleep entry per morning');
 
 select tests.eq((select count(*) from public.profiles), 1, 'A sees only their own profile');
 select tests.eq((select count(*) from public.sets), 1, 'A sees their set');
@@ -82,6 +87,9 @@ select tests.eq((select count(*) from public.workouts), 0, 'B cannot see A worko
 select tests.eq((select count(*) from public.sets), 0, 'B cannot see A sets');
 select tests.eq((select count(*) from public.body_measurements), 0, 'B cannot see A weigh-ins');
 select tests.eq((select count(*) from public.food_log_entries), 0, 'B cannot see A food log');
+select tests.eq((select count(*) from public.water_entries), 0, 'B cannot see A water');
+select tests.eq((select count(*) from public.sleep_entries), 0, 'B cannot see A sleep');
+with u as (update public.sleep_entries set quality = 1 returning 1) select tests.eq((select count(*) from u), 0, 'B cannot update A sleep');
 select tests.eq((select count(*) from public.exercises where owner_id is not null), 0, 'B cannot see A private exercise');
 select tests.eq((select (count(*) > 700)::int from public.exercises), 1, 'B can read the shared exercise library');
 select tests.eq((select count(*) from public.foods), 1, 'B sees only the shared food');

@@ -5,7 +5,9 @@ import { lbToKg } from '@/lib/units'
 import { openLocalDb } from './db'
 import { buildExport } from './export'
 import { createCustomFood, logFood } from './food'
+import { saveSleep } from './sleep'
 import { LocalStore } from './store'
+import { logWater } from './water'
 
 describe('data export', () => {
   it('zips readable CSVs (lb, miles, totals) and every table raw, without deleted rows', async () => {
@@ -26,6 +28,9 @@ describe('data export', () => {
     const gone = await logFood(store, '2026-10-15', 'lunch', food, 1)
     await store.remove('food_log_entries', gone.id)
     await store.insert('cardio_entries', { performed_on: '2026-10-15', activity: 'walk', duration_min: 20, distance_km: 1.609, notes: null })
+    await logWater(store, '2026-10-15', 24)
+    await logWater(store, '2026-10-15', 8)
+    await saveSleep(store, '2026-10-15', { bed_time: '23:15', wake_time: '06:45', quality: 4 })
 
     const out = await buildExport(store.db, 'user-1', '2026-10-15')
     expect(out.filename).toBe('soevs-strength-lab-export-2026-10-15.zip')
@@ -33,6 +38,8 @@ describe('data export', () => {
     const files = unzipSync(new Uint8Array(await out.blob.arrayBuffer()))
     const read = (n: string) => strFromU8(files[n]).trim().split('\r\n')
     expect(Object.keys(files)).toContain('raw/sets.csv')
+    expect(read('water.csv')).toEqual(['date,water_oz', '2026-10-15,32'])
+    expect(read('sleep.csv')).toEqual(['woke_on,bedtime,wake_time,minutes_asleep,quality_1_5', '2026-10-15,23:15,06:45,450,4'])
     expect(read('sets.csv')[1]).toMatch(/^2026-10-15,Legs,Barbell Squat,1,working,225,8,2,/)
     expect(read('workouts.csv')[1]).toMatch(/^2026-10-15,Legs,.*,50,1,1800,/)
     expect(read('food.csv')).toEqual([

@@ -8,7 +8,8 @@ import { ScreenHeader } from '@/components/ScreenHeader'
 import { SyncStatusCard } from '@/components/SyncStatusCard'
 import { TestingTools } from '@/components/TestingTools'
 import { useData } from '@/data/DataProvider'
-import { saveAppSetting, useAppSettings, type AppSettings } from '@/data/profile'
+import { saveAppSetting, saveFeature, useAppSettings, useFeatures, type AppSettings } from '@/data/profile'
+import { FEATURES } from '@/lib/features'
 import { useMainGym } from '@/data/queries'
 import { supabase } from '@/lib/supabase'
 
@@ -18,6 +19,7 @@ export function MoreScreen() {
   const [signingOut, setSigningOut] = useState(false)
   const confirm = useConfirm()
   const gymInfo = useMainGym()
+  const features = useFeatures()
 
   async function signOut() {
     setSigningOut(true)
@@ -56,8 +58,9 @@ export function MoreScreen() {
           <ChevronRight size={20} className="text-muted" aria-hidden />
         </Link>
         <WorkoutSettings />
+        <FeatureSwitches />
         <ExportCard />
-        <TestingTools />
+        {features?.testingTools && <TestingTools />}
         <button
           type="button"
           disabled={signingOut}
@@ -81,14 +84,32 @@ function WorkoutSettings() {
   return (
     <section className="divide-y divide-border rounded-2xl border border-border bg-surface" aria-label="Workout settings">
       <h2 className="px-4 pt-3 pb-2 text-sm font-semibold text-muted">Workout</h2>
-      <SettingRow label="Rest timer" detail="Starts after each set (3 / 2 / 1 min by exercise)" initial={settings.restTimer} save={(v) => ({ restTimer: v })} />
-      <SettingRow label='Ask "reps left in the tank?"' detail="Optional effort row after each set" initial={settings.askEffort} save={(v) => ({ askEffort: v })} />
+      <SettingRow key={`rest-${settings.restTimer}`} label="Rest timer" detail="Starts after each set (3 / 2 / 1 min by exercise)" initial={settings.restTimer} save={(v) => ({ restTimer: v })} />
+      <SettingRow key={`effort-${settings.askEffort}`} label='Ask "reps left in the tank?"' detail="Optional effort row after each set" initial={settings.askEffort} save={(v) => ({ askEffort: v })} />
     </section>
   )
 }
 
-/** A switch that flips instantly and saves in the background. */
-function SettingRow(props: { label: string; detail: string; initial: boolean; save: (v: boolean) => Partial<AppSettings> }) {
+/** Turn off the parts of the app you don't use. They disappear from the tabs and Today; your data is kept. */
+function FeatureSwitches() {
+  const { store } = useData()
+  const features = useFeatures()
+  if (!features) return null
+  return (
+    <section className="divide-y divide-border rounded-2xl border border-border bg-surface" aria-label="Features">
+      <h2 className="px-4 pt-3 pb-2 text-sm font-semibold text-muted">
+        Features <span className="font-normal">· off = hidden, your data is kept</span>
+      </h2>
+      {FEATURES.map((f) => (
+        <SettingRow key={`${f.key}-${features[f.key]}`} label={f.label} detail={f.detail} initial={features[f.key]} onSave={(v) => saveFeature(store, f.key, v)} />
+      ))}
+    </section>
+  )
+}
+
+/** A switch that flips instantly and saves in the background. Callers key it on the stored value so it follows
+ *  changes that arrive later (first download on a new phone, another device). */
+function SettingRow(props: { label: string; detail: string; initial: boolean; save?: (v: boolean) => Partial<AppSettings>; onSave?: (v: boolean) => Promise<unknown> }) {
   const { store } = useData()
   const [on, setOn] = useState(props.initial)
   return (
@@ -102,7 +123,7 @@ function SettingRow(props: { label: string; detail: string; initial: boolean; sa
         checked={on}
         onChange={(e) => {
           setOn(e.target.checked)
-          void saveAppSetting(store, props.save(e.target.checked))
+          void (props.onSave ? props.onSave(e.target.checked) : saveAppSetting(store, props.save!(e.target.checked)))
         }}
         className="size-6 accent-accent"
       />

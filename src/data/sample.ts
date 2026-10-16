@@ -159,3 +159,15 @@ export async function deleteAllCardio(store: LocalStore): Promise<number> {
     return rows.length
   })
 }
+
+/** Deletes every water and sleep entry. */
+export async function deleteAllWaterAndSleep(store: LocalStore): Promise<number> {
+  const { db } = store
+  return db.transaction('rw', [db.water_entries, db.sleep_entries, db.outbox], async () => {
+    const water = live(await db.water_entries.toArray())
+    const sleep = live(await db.sleep_entries.toArray())
+    for (const r of water) await store.remove('water_entries', r.id)
+    for (const r of sleep) await store.remove('sleep_entries', r.id)
+    return water.length + sleep.length
+  })
+}

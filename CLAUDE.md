@@ -83,7 +83,8 @@ displayed in lb. Derived stats (e1RM, PRs, volume, trends, next targets) are com
 - People: `profiles`, `equipment_profiles`, `exercise_unavailable`
 - Exercises: `exercises` (owner_id null = shared catalog, read-only to users), `user_exercise_settings`
 - Training: `workouts`, `workout_exercises`, `sets` (set_type warmup/working/limited, rir nullable), `cardio_entries`
-- Body: `body_measurements` (one per day; weight_kg, body_fat_pct?, muscle_mass_kg?)
+- Body: `body_measurements` (one per day; weight_kg, body_fat_pct?, muscle_mass_kg?), `water_entries` (one per drink,
+  amount_ml), `sleep_entries` (one per wake_date; bed_time, wake_time, duration_min, quality 1–5?)
 - Food: `foods` (owner_id null = shared cache, written only server-side), `saved_meals`, `saved_meal_items`,
   `food_log_entries` (snapshot of name + macros)
 - Plans: `goals`, `nutrition_targets` (history), `plan_templates`, `plan_template_days`, `plan_template_exercises`,
@@ -206,6 +207,21 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   suggested when already at the calorie floor. "Reset" on the plan page zeroes them.
 - Profiles sync: keyed by user id (OWNER_COLUMN 'id'); server allows UPDATE only (row created at sign-up), so
   `supabaseRemote` updates instead of upserting and strips `deleted_at`. Goals: one active row, changed in place.
+- Feature switches (UX pass, 2026-10-16, `src/lib/features.ts`): profile.settings.features; More → Features turns off
+  Food (tab, Today card, TargetKeeper), Body weight, Cardio, Water, Sleep, Plan my week (Train link; Today follows the
+  plain template), Testing tools. Off = hidden, data kept. Defaults: all on except Testing tools (off for every
+  account until switched on). Workouts are always on. Switches are keyed on the stored value (a fresh install shows
+  defaults until the first download, then follows it).
+- Water (`water_entries`, Dexie v7): one row per drink (ml, shown in oz); Today card +8 / +16 / + my bottle, undo last.
+  Goal = profile.settings.waterGoalOz, else ~35 ml/kg of the 7-day avg weight rounded to 8 oz (64–160; 96 with no
+  weight); bottle size waterBottleOz (default 24).
+- Sleep (`sleep_entries`, Dexie v7): one row per night keyed by wake_date (unique; save re-uses the row like weigh-ins),
+  bed/wake local clock times, duration_min computed across midnight, quality 1–5 optional (Awful…Great). Today card
+  "Log last night" (pre-filled from the last night); Progress → Body shows the last 7 nights (tap to edit/add).
+  Body tab shows when Body weight or Sleep is on. Both in the CSV export (water.csv per day, sleep.csv).
+- Sync push reads the whole outbox ONCE per push (snapshot), then sends it in SYNC_ORDER. Reading table by table let
+  a parent saved mid-push miss the round while its child (saved after it) went up alone → FK rejection (found with
+  the demo filler: goal + calorie target). Regression test in sync.test.ts.
 - Allowed values are text + CHECK constraints, not Postgres enums (easier to extend).
 - Supabase "publishable"/anon key is safe in the frontend because RLS protects data. The service-role key is
   never in frontend code or the repo.
@@ -321,6 +337,11 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [ ] Owner: test offline (Airplane Mode) + export on iPhone
 - [ ] **UX pass** (after Phase 6, owner agreed): navigation/layout, look (colors, type, spacing), name + icon,
       first-run and empty states, wording. Work through "UX notes" below.
+  - [x] U1 Water + sleep tracking, feature switches (More → Features), Testing tools behind a switch (off by default)
+  - [ ] Owner: run `20261017000000_water_sleep.sql` in Supabase SQL Editor (before using water/sleep on the live app)
+  - [ ] U2 Setup wizard for new users (about you, goal, training days/length/style → generated split, gym, features);
+        replaces OWNER_DEFAULTS + the hard-coded starter split for new accounts; re-runnable from More
+  - [ ] U3 First-time tips on each screen
 - [ ] **Phase 7 (optional): Claude API layer (weekly plan writing, stall adjustments)**
 
 ## UX notes (owner feedback for the UX pass; add as it comes in)
@@ -336,7 +357,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   (sample.ts), profile + recomp goal started 15 days ago (check-in due) + target, 11 everyday foods, "Usual breakfast"
   meal + chili recipe, 14 days of food + today's breakfast, ~6 weeks of walks/Friday runs, next week planned (Tue busy,
   Thu short 30, Sat hotel). The demo login itself is created by the owner in Supabase (Auth → Users → Add user).
-- **Before sharing with anyone: remove Testing tools** and OWNER_DEFAULTS in `NutritionPlanScreen.tsx`; (`src/components/TestingTools.tsx`, `src/data/sample.ts`)
+- **Before sharing with anyone:** Testing tools are now behind a feature switch (off by default); still remove OWNER_DEFAULTS in `NutritionPlanScreen.tsx`; (`src/components/TestingTools.tsx`, `src/data/sample.ts`)
 - Suggested workout times from availability blocks (e.g. busy 8am–6pm) + one-off commitments
 - Google Calendar sync (adds OAuth + privacy surface)
 - AI: free-text week check-in ("out of town Fri–Sun, hotel gym")

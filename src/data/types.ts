@@ -133,6 +133,11 @@ export type ProfileSettings = {
   restTimer?: boolean
   /** Ask "reps left in the tank?" after each set (default on). "Couldn't finish" is always offered. */
   askEffort?: boolean
+  /** Parts of the app you use; off = hidden (data is kept). Missing = default (see src/lib/features.ts). */
+  features?: Partial<Record<'food' | 'body' | 'cardio' | 'water' | 'sleep' | 'planWeek' | 'testingTools', boolean>>
+  /** Your own daily water goal in oz (null/missing = calculated from body weight) and your bottle size. */
+  waterGoalOz?: number | null
+  waterBottleOz?: number
 }
 
 export type Goal = Owned & {
@@ -215,6 +220,12 @@ export type CardioEntry = Owned & {
   notes: string | null
 }
 
+/** One drink. The day's water is the sum of its entries. Stored in ml, shown in oz. */
+export type WaterEntry = Owned & { logged_on: string; amount_ml: number }
+
+/** One night, keyed by the morning you woke up. Clock times are local "HH:MM" (Postgres may add ":SS"). */
+export type SleepEntry = Owned & { wake_date: string; bed_time: string; wake_time: string; duration_min: number; quality: number | null }
+
 /** One week of "Plan my week" (week_start = the Sunday). Only your day settings are stored; the plan is computed. */
 export type WeekPlan = Owned & { template_id: string | null; week_start: string }
 export type WeekPlanDay = Owned & {
@@ -244,6 +255,8 @@ export type Tables = {
   workout_exercises: WorkoutExercise
   sets: WorkoutSet
   cardio_entries: CardioEntry
+  water_entries: WaterEntry
+  sleep_entries: SleepEntry
   body_measurements: BodyMeasurement
   foods: Food
   saved_meals: SavedMeal
@@ -271,6 +284,8 @@ export const SYNC_ORDER: TableName[] = [
   'workout_exercises',
   'sets',
   'cardio_entries',
+  'water_entries',
+  'sleep_entries',
   'body_measurements',
   'foods',
   'saved_meals',
@@ -299,6 +314,8 @@ export const OWNER_COLUMN: Record<TableName, 'user_id' | 'owner_id' | 'id'> = {
   workout_exercises: 'user_id',
   sets: 'user_id',
   cardio_entries: 'user_id',
+  water_entries: 'user_id',
+  sleep_entries: 'user_id',
   body_measurements: 'user_id',
   foods: 'owner_id',
   saved_meals: 'user_id',

@@ -28,8 +28,12 @@ export class SyncEngine {
   }
 
   async push(): Promise<SyncResult> {
+    // One snapshot of the queue up front. Reading it table by table let a goal saved mid-push (after "goals" was
+    // done) miss this round while its calorie target, saved a moment later, went up without it and was rejected.
+    // Changes are queued in order, so a snapshot that holds a child also holds its parent.
+    const queued = (await this.db.outbox.toArray()).filter((e) => !e.failed)
     for (const table of SYNC_ORDER) {
-      const entries = await this.db.outbox.where('table').equals(table).filter((e) => !e.failed).toArray()
+      const entries = queued.filter((e) => e.table === table)
       for (let i = 0; i < entries.length; i += PUSH_BATCH) {
         const batch = entries.slice(i, i + PUSH_BATCH)
         if ((await this.pushBatch(table, batch)) === 'offline') return 'offline'

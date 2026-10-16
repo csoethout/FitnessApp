@@ -5,6 +5,8 @@ import { miToKm } from '@/lib/cardio'
 import { addDaysKey } from '@/lib/nutrition'
 import { STARTER_SPLIT } from '@/lib/starterSplit'
 import { cardioTotals } from '@/lib/cardio'
+import { saveSleep } from './sleep'
+import { logWater } from './water'
 import { createCustomFood, logFood, setTarget } from './food'
 import { createMeal, loadMeals, logSavedMeal } from './meals'
 import { loadPlanState, saveProfile, setGoal } from './profile'
@@ -118,7 +120,20 @@ export async function fillDemoAccount(store: LocalStore, now = new Date()): Prom
     cardio++
   }
 
-  // 6. Next week planned around a busy Tuesday, a short Thursday and a hotel on Saturday.
+  // 6. Two weeks of water (a few bottles a day) and sleep (later on weekends), plus last night.
+  for (let daysAgo = 14; daysAgo >= 0; daysAgo--) {
+    const date = addDaysKey(today, -daysAgo)
+    const bottles = daysAgo === 0 ? 2 : 3 + Math.round(wobble(daysAgo, 3) * 2)
+    for (let b = 0; b < bottles; b++) await logWater(store, date, 24)
+    if (daysAgo > 0 && wobble(daysAgo, 4) > 0.5) await logWater(store, date, 16)
+    const weekend = [0, 6].includes(new Date(date + 'T12:00:00').getDay())
+    const bedMin = 22 * 60 + 45 + Math.round(wobble(daysAgo, 5) * 60) + (weekend ? 45 : 0)
+    const wake = weekend ? '07:45' : `06:${String(10 + Math.round(wobble(daysAgo, 6) * 30)).padStart(2, '0')}`
+    const bed = `${String(Math.floor(bedMin / 60) % 24).padStart(2, '0')}:${String(bedMin % 60).padStart(2, '0')}`
+    await saveSleep(store, date, { bed_time: bed, wake_time: wake, quality: 2 + Math.round(wobble(daysAgo, 7) * 3) })
+  }
+
+  // 7. Next week planned around a busy Tuesday, a short Thursday and a hotel on Saturday.
   const next = addDaysKey(weekStartOf(today), 7)
   const plan = await ensureWeekPlan(store, next)
   const days = live(await db.week_plan_days.where('week_plan_id').equals(plan.id).toArray())
@@ -129,5 +144,5 @@ export async function fillDemoAccount(store: LocalStore, now = new Date()): Prom
   await setDay(store, on(6), { status: 'away', minutes_available: null, equipment_profile_id: hotel?.id ?? null })
 
   const mi = cardioTotals(live(await db.cardio_entries.toArray())).miles
-  return `Demo ready: ${sessions} workouts, ${weighIns} weigh-ins, ${entries} food entries, ${cardio} walks/runs (${mi} mi), saved meals, a hotel gym and next week planned.`
+  return `Demo ready: ${sessions} workouts, ${weighIns} weigh-ins, ${entries} food entries, ${cardio} walks/runs (${mi} mi), 2 weeks of water and sleep, saved meals, a hotel gym and next week planned.`
 }

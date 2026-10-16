@@ -6,6 +6,7 @@ import { HistoryList } from '@/components/HistoryList'
 import { ScreenHeader } from '@/components/ScreenHeader'
 import { TodayWorkoutCard } from '@/components/TodayWorkoutCard'
 import { useData } from '@/data/DataProvider'
+import { useFeatures } from '@/data/profile'
 import { useActiveWeek, useDayExerciseCounts } from '@/data/queries'
 import { applyBlankWeek, applyStarterSplit } from '@/data/setup'
 import { WEEKDAYS } from '@/lib/dates'
@@ -24,17 +25,20 @@ export function TrainScreen() {
 function WeekOverview({ days }: { days: NonNullable<ReturnType<typeof useActiveWeek>>['days'] }) {
   const counts = useDayExerciseCounts(days.map((d) => d.id))
   const [today] = useState(() => new Date().getDay())
+  const features = useFeatures()
   return (
     <div className="space-y-3">
       <TodayWorkoutCard />
-      <Link to="/train/week" className="flex min-h-14 items-center gap-3 rounded-2xl border border-border bg-surface px-4">
-        <CalendarDays size={20} className="text-accent" />
-        <span className="flex-1">
-          <span className="block font-medium">Plan my week</span>
-          <span className="block text-xs text-muted">Short, busy or away days? The week adapts.</span>
-        </span>
-        <ChevronRight className="text-muted" size={20} aria-hidden />
-      </Link>
+      {features?.planWeek && (
+        <Link to="/train/week" className="flex min-h-14 items-center gap-3 rounded-2xl border border-border bg-surface px-4">
+          <CalendarDays size={20} className="text-accent" />
+          <span className="flex-1">
+            <span className="block font-medium">Plan my week</span>
+            <span className="block text-xs text-muted">Short, busy or away days? The week adapts.</span>
+          </span>
+          <ChevronRight className="text-muted" size={20} aria-hidden />
+        </Link>
+      )}
       <ul className="overflow-hidden rounded-2xl border border-border bg-surface">
         {days.map((d) => (
           <li key={d.id} className="border-b border-border last:border-b-0">

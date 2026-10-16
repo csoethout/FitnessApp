@@ -1,6 +1,8 @@
 import { strToU8, zipSync } from 'fflate'
 import { localDateKey } from '@/lib/body'
 import { kmToMi } from '@/lib/cardio'
+import { hhmm } from '@/lib/sleep'
+import { mlToOz } from '@/lib/water'
 import { objectsToCsv, toCsv } from '@/lib/csv'
 import { EXTRA_NUTRIENTS, entryCol } from '@/lib/nutrition'
 import { kgToLb } from '@/lib/units'
@@ -21,6 +23,8 @@ Readable files (US units, your local dates and times):
   food.csv      food log, one row per entry; nutrients are totals for the servings eaten
   cardio.csv    walks, runs and other cardio (minutes, miles)
   targets.csv   daily calorie and macro targets over time
+  water.csv     water per day (oz)
+  sleep.csv     one row per night, dated by the morning you woke up (minutes asleep, quality 1-5)
 
 raw/  every table exactly as stored (weights in kg, distances in km, times in UTC), for re-importing or analysis.
 Deleted rows are left out.
@@ -64,6 +68,10 @@ export async function buildExport(db: LocalDb, userId: string, today = localDate
   const food = live(await db.food_log_entries.toArray()).sort((a, b) => a.logged_on.localeCompare(b.logged_on) || a.created_at.localeCompare(b.created_at))
   const cardio = live(await db.cardio_entries.toArray()).sort((a, b) => a.performed_on.localeCompare(b.performed_on))
   const targets = live(await db.nutrition_targets.toArray()).sort((a, b) => a.effective_from.localeCompare(b.effective_from))
+  const waterByDay = new Map<string, number>()
+  for (const w of live(await db.water_entries.toArray())) waterByDay.set(w.logged_on, (waterByDay.get(w.logged_on) ?? 0) + w.amount_ml)
+  const water = [...waterByDay].sort(([a], [b]) => a.localeCompare(b))
+  const sleep = live(await db.sleep_entries.toArray()).sort((a, b) => a.wake_date.localeCompare(b.wake_date))
   const extraCols = EXTRA_NUTRIENTS.map((x) => `${x.key}_${x.unit}`)
 
   const files: Record<string, Uint8Array> = {
@@ -85,6 +93,8 @@ export async function buildExport(db: LocalDb, userId: string, today = localDate
       ),
     ),
     'cardio.csv': strToU8(toCsv(['date', 'activity', 'minutes', 'miles', 'notes'], cardio.map((c) => [c.performed_on, c.activity, c.duration_min, c.distance_km === null ? null : Math.round(kmToMi(c.distance_km) * 100) / 100, c.notes]))),
+    'water.csv': strToU8(toCsv(['date', 'water_oz'], water.map(([d, ml]) => [d, Math.round(mlToOz(ml))]))),
+    'sleep.csv': strToU8(toCsv(['woke_on', 'bedtime', 'wake_time', 'minutes_asleep', 'quality_1_5'], sleep.map((n) => [n.wake_date, hhmm(n.bed_time), hhmm(n.wake_time), n.duration_min, n.quality]))),
     'targets.csv': strToU8(toCsv(['from', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'reason'], targets.map((t) => [t.effective_from, t.kcal, t.protein_g, t.carbs_g, t.fat_g, t.reason]))),
   }
   for (const [table, rows] of Object.entries(raw)) files[`raw/${table}.csv`] = strToU8(objectsToCsv(rows))

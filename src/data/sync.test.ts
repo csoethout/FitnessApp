@@ -60,6 +60,25 @@ describe('local-first saving', () => {
     expect(remote.table('sets').get(set.id)?.reps).toBe(9)
   })
 
+  it('does not send a child whose parent was saved after that table was already pushed', async () => {
+    // A workout is saved while the push is already sending workouts; its exercise row
+    // follows a moment later. The exercise must wait for the next round instead of being rejected for good.
+    const first = await logOneSet()
+    let workout: { id: string } | null = null
+    remote.onUpsert = async (table) => {
+      if (table !== 'workouts' || workout) return
+      workout = await store.insert('workouts', { name: 'Push', started_at: new Date().toISOString(), ended_at: null, week_plan_day_id: null, equipment_profile_id: null, notes: null })
+      await store.insert('workout_exercises', { workout_id: workout.id, exercise_id: 'bench', position: 0, swapped_from_exercise_id: null, notes: null })
+    }
+    expect(await engine.push()).toBe('ok')
+    expect(remote.table('sets').has(first.set.id)).toBe(true)
+    expect((await db.outbox.toArray()).filter((e) => e.failed)).toEqual([])
+    remote.onUpsert = null
+    expect(await engine.sync()).toBe('ok')
+    expect(remote.table('workouts').has(workout!.id)).toBe(true)
+    expect(remote.table('workout_exercises').size).toBe(2)
+  })
+
   it('lets the server set updated_at, then pulls it back', async () => {
     const { set } = await logOneSet()
     await engine.sync()

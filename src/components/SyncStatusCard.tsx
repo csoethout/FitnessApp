@@ -6,7 +6,7 @@ import { useConfirm } from './ConfirmProvider'
 const TABLE_LABELS: Partial<Record<TableName, string>> = {
   nutrition_targets: "Today's calorie target", week_plans: 'Week plan', week_plan_days: 'Week plan day', body_measurements: 'Weigh-in',
   food_log_entries: 'Food entry', foods: 'Saved food', saved_meals: 'Saved meal', saved_meal_items: 'Saved meal food',
-  workouts: 'Workout', workout_exercises: 'Workout exercise', sets: 'Set', cardio_entries: 'Cardio', profiles: 'Profile / settings',
+  workouts: 'Workout', workout_exercises: 'Workout exercise', sets: 'Set', cardio_entries: 'Cardio', water_entries: 'Water', sleep_entries: 'Sleep', profiles: 'Profile / settings',
   goals: 'Goal', equipment_profiles: 'Gym', exercise_unavailable: '"Not at this gym"', plan_templates: 'Weekly plan',
   plan_template_days: 'Weekly plan day', plan_template_exercises: 'Weekly plan exercise',
 }

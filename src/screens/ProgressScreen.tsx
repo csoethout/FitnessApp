@@ -3,7 +3,9 @@ import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { BodyView } from '@/components/BodyView'
 import { ScreenHeader } from '@/components/ScreenHeader'
+import { SleepHistory } from '@/components/SleepHistory'
 import { Sparkline } from '@/components/Sparkline'
+import { useFeatures } from '@/data/profile'
 import { useProgressData } from '@/data/progress'
 import { formatWeight } from '@/lib/logger'
 import {
@@ -18,23 +20,34 @@ const SET_TARGET = 10 // common weekly hard-set target per muscle group
 
 export function ProgressScreen() {
   const [tab, setTab] = useState<'strength' | 'body'>('strength')
+  const f = useFeatures()
+  const bodyTab = !!f && (f.body || f.sleep)
   return (
     <>
       <ScreenHeader title="Progress" />
-      <div role="tablist" className="mb-4 grid grid-cols-2 rounded-xl bg-surface p-1">
-        {(['strength', 'body'] as const).map((t) => (
-          <button
-            key={t}
-            role="tab"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
-            className={`min-h-11 rounded-lg capitalize ${tab === t ? 'bg-surface-2 font-semibold' : 'text-muted'}`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-      {tab === 'strength' ? <Strength /> : <BodyView />}
+      {bodyTab && (
+        <div role="tablist" className="mb-4 grid grid-cols-2 rounded-xl bg-surface p-1">
+          {(['strength', 'body'] as const).map((t) => (
+            <button
+              key={t}
+              role="tab"
+              aria-selected={tab === t}
+              onClick={() => setTab(t)}
+              className={`min-h-11 rounded-lg capitalize ${tab === t ? 'bg-surface-2 font-semibold' : 'text-muted'}`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+      {tab === 'strength' || !bodyTab ? (
+        <Strength />
+      ) : (
+        <>
+          {f.body && <BodyView />}
+          {f.sleep && <SleepHistory />}
+        </>
+      )}
     </>
   )
 }

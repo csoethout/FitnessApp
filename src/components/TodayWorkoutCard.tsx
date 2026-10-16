@@ -1,6 +1,7 @@
 import { Play } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { useFeatures } from '@/data/profile'
 import { useActiveWeek, useActiveWorkout } from '@/data/queries'
 import { useStartWorkout } from '@/data/useStartWorkout'
 import { useTodayPlan } from '@/data/weekPlan'
@@ -14,13 +15,15 @@ import { useNow } from '@/lib/useNow'
 export function TodayWorkoutCard() {
   const active = useActiveWorkout()
   const week = useActiveWeek()
-  const planned = useTodayPlan()
+  const features = useFeatures()
+  const plannedWeek = useTodayPlan()
   const start = useStartWorkout()
   const now = useNow(30_000)
   const [today] = useState(() => new Date().getDay())
   const [busy, setBusy] = useState(false)
 
-  if (active === undefined || week === undefined || planned === undefined) return null
+  if (active === undefined || week === undefined || plannedWeek === undefined || !features) return null
+  const planned = features.planWeek ? plannedWeek : null // switched off: plain template
 
   if (active) {
     return (
