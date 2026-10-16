@@ -149,3 +149,13 @@ export async function deleteAllWorkouts(store: LocalStore): Promise<number> {
     return workouts.length
   })
 }
+
+/** Deletes every cardio entry. */
+export async function deleteAllCardio(store: LocalStore): Promise<number> {
+  const { db } = store
+  return db.transaction('rw', [db.cardio_entries, db.outbox], async () => {
+    const rows = live(await db.cardio_entries.toArray())
+    for (const r of rows) await store.remove('cardio_entries', r.id)
+    return rows.length
+  })
+}

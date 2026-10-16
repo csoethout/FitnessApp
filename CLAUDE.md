@@ -331,6 +331,11 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
 
 ## Backlog (not in MVP)
 - kg units setting (profile.unit_system exists; replace the lb constants: WEIGHT_UNIT, UNIT in screens, body/plan screens)
+- Demo account (owner request 2026-10-16): More → Testing tools → "Fill demo account" (`src/data/demo.ts`) fills an
+  EMPTY account (refuses if it has its own workouts/food): starter split, hotel gym, 6 weeks of workouts + weigh-ins
+  (sample.ts), profile + recomp goal started 15 days ago (check-in due) + target, 11 everyday foods, "Usual breakfast"
+  meal + chili recipe, 14 days of food + today's breakfast, ~6 weeks of walks/Friday runs, next week planned (Tue busy,
+  Thu short 30, Sat hotel). The demo login itself is created by the owner in Supabase (Auth → Users → Add user).
 - **Before sharing with anyone: remove Testing tools** and OWNER_DEFAULTS in `NutritionPlanScreen.tsx`; (`src/components/TestingTools.tsx`, `src/data/sample.ts`)
 - Suggested workout times from availability blocks (e.g. busy 8am–6pm) + one-off commitments
 - Google Calendar sync (adds OAuth + privacy surface)

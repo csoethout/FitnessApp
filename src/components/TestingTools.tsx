@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useData } from '@/data/DataProvider'
-import { addSampleWeighIns, addSampleWorkouts, deleteAllFoodLog, deleteAllWeighIns, deleteAllWorkouts } from '@/data/sample'
+import { fillDemoAccount } from '@/data/demo'
+import { deleteAllCardio, deleteAllFoodLog, deleteAllWeighIns, deleteAllWorkouts } from '@/data/sample'
 import { restTimer } from '@/lib/restTimer'
 import { useConfirm } from './ConfirmProvider'
 
@@ -34,21 +35,18 @@ export function TestingTools() {
           onClick={() =>
             void run(async () => {
               const ok = await confirm({
-                title: 'Add sample data?',
-                message: 'Adds 6 weeks of made-up workouts (following your weekly plan, slowly getting stronger) and weigh-ins (slowly trending down).',
-                confirmLabel: 'Add sample data',
+                title: 'Fill this account with demo data?',
+                message:
+                  'For a demo account only: 6 weeks of workouts, weigh-ins and walks, 2 weeks of food, saved meals, a nutrition plan with a check-in due, a hotel gym and next week planned. Refused if the account already has its own workouts or food.',
+                confirmLabel: 'Fill demo data',
               })
               if (!ok) return ''
-              const w = await addSampleWeighIns(store)
-              const n = await addSampleWorkouts(store).catch((e: Error) => {
-                throw new Error(`Added ${w} weigh-ins. Workouts: ${e.message}`)
-              })
-              return `Added ${n} workouts and ${w} weigh-ins. See Progress and Train → History.`
+              return fillDemoAccount(store)
             })
           }
           className="min-h-12 w-full rounded-xl border border-border bg-surface-2 disabled:opacity-50"
         >
-          Add 6 weeks of sample data
+          Fill demo account
         </button>
         <button
           type="button"
@@ -58,7 +56,7 @@ export function TestingTools() {
               const ok = await confirm({
                 title: 'Delete ALL logged data?',
                 message:
-                  'Every workout, weigh-in and food log entry, real or sample, is removed from this phone and from your account. Your weekly plan, gym, saved foods and targets are kept. This cannot be undone.',
+                  'Every workout, weigh-in, cardio and food log entry, real or sample, is removed from this phone and from your account. Your weekly plan, gyms, saved foods and meals, and targets are kept. This cannot be undone.',
                 confirmLabel: 'Delete everything logged',
                 danger: true,
               })
@@ -66,8 +64,9 @@ export function TestingTools() {
               const n = await deleteAllWorkouts(store)
               const w = await deleteAllWeighIns(store)
               const f = await deleteAllFoodLog(store)
+              const c = await deleteAllCardio(store)
               restTimer.skip()
-              return `Deleted ${n} workouts, ${w} weigh-ins and ${f} food entries.`
+              return `Deleted ${n} workouts, ${w} weigh-ins, ${f} food entries and ${c} cardio entries.`
             })
           }
           className="min-h-12 w-full rounded-xl border border-danger/50 text-danger disabled:opacity-50"
