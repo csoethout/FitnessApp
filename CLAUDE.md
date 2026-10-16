@@ -342,7 +342,7 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   - [x] U2 Setup wizard (`/setup`, `src/screens/SetupScreen.tsx`, data in `src/data/onboarding.ts`): 8 steps —
         welcome (name, skip), about you (sex, birth date, height, weight if no weigh-in), goal + activity, training
         (days/week + which days, 30–75 min, experience), gym preset, tour of the 5 tabs, features, summary (targets +
-        generated week; "Keep mine / Use a new one" when a week exists). New accounts are redirected there (AppLayout,
+        generated week; "Keep mine / Use a new one" when a week exists). Reruns (setupDone or a week exists) get a Close button → More. New accounts are redirected there (AppLayout,
         `useNeedsSetup`: after first sync, no settings.setupDone, no active week, no workouts); More → Run setup again.
         Week generator `src/lib/planner/split.ts` (pure, tested against the real library): 2 days full body A/B,
         3 PPL (new lifters full body A/B/C), 4 upper/lower, 5 U/L/P/P/L, 6 PPL×2; movement slots pick the first

@@ -48,7 +48,7 @@ export function SetupScreen() {
   return <Wizard {...loaded} />
 }
 
-function Wizard(props: { answers: SetupAnswers; hasWeek: boolean; hasWeight: boolean; equipmentOf: EquipmentOf; names: Map<string, string> }) {
+function Wizard(props: { answers: SetupAnswers; hasWeek: boolean; hasWeight: boolean; rerun: boolean; equipmentOf: EquipmentOf; names: Map<string, string> }) {
   const { store } = useData()
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
@@ -89,6 +89,11 @@ function Wizard(props: { answers: SetupAnswers; hasWeek: boolean; hasWeight: boo
           <span className="ml-auto text-sm text-muted">
             {step + 1} of {STEPS.length}
           </span>
+          {props.rerun && (
+            <button type="button" onClick={() => navigate('/more', { replace: true })} className="-mr-2 ml-2 flex min-h-12 items-center px-2 text-muted">
+              Close
+            </button>
+          )}
         </div>
         <div className="flex gap-1" aria-hidden>
           {STEPS.map((s, i) => (

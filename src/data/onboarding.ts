@@ -54,7 +54,9 @@ export async function loadSetupDefaults(db: LocalDb, userId: string, features: F
     features,
     week: template ? 'keep' : 'new',
   }
-  return { answers, hasWeek: !!template, hasWeight: weightKg !== null }
+  // A rerun (from More): you can close the wizard without changing anything.
+  const rerun = !!profile?.settings?.setupDone || !!template
+  return { answers, hasWeek: !!template, hasWeight: weightKg !== null, rerun }
 }
 
 /** Source id → equipment for the whole library (for the week generator). */
