@@ -146,6 +146,10 @@ Schema lives in `supabase/migrations/`. Never edit an applied migration; add a n
   targets; lb, miles, local dates) + `raw/<table>.csv` for every synced table (shared exercise library and deleted
   rows left out) + README. Second tap "Save or share" uses the share sheet (iOS needs a fresh tap for it) or a
   download. CSV cells are RFC 4180 and formula-defused (`src/lib/csv.ts`).
+- No black screens (owner bug 2026-10-16: home-screen app opened to a black screen, cause unknown — no WebKit here):
+  index.html has a plain-JS boot watchdog (#boot-help): if #root is empty after 8 s, or ErrorBoundary / RouteError
+  catch a crash, it shows the error text + user agent with Reload and "Reset app" (unregisters the service worker,
+  clears caches; IndexedDB data kept). `vite:preloadError` → reload once (stale lazy chunk after an update).
 - Sync: one IndexedDB per user (`liftlog-<uid>`), deleted on sign-out (after warning about unsynced changes).
   Server owns `updated_at`; pull uses keyset (updated_at, id); rows with pending local edits are never overwritten;
   server-rejected rows are marked failed (shown in More with the table and a plain-language reason; "Try again"

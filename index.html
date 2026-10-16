@@ -13,6 +13,44 @@
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      Safety net: if the app hasn't drawn anything after 8 s (crashed, or its code failed to load), show what
+      happened with Reload / Reset instead of a black screen. Plain JS on purpose: it must work when the app doesn't.
+    -->
+    <div id="boot-help" hidden style="position:fixed;inset:0;padding:max(24px,env(safe-area-inset-top)) 20px 24px;background:#0b0f14;color:#e5e7eb;font:16px/1.4 -apple-system,system-ui,sans-serif;overflow:auto">
+      <h1 style="font-size:22px;margin:0 0 8px">The app didn't start</h1>
+      <p style="color:#9ca3af;margin:0 0 16px">Your data is safe on the server. Try Reload first; if that doesn't help, Reset app downloads a fresh copy of the app (your account and data stay).</p>
+      <button id="boot-reload" style="display:block;width:100%;min-height:52px;border:0;border-radius:12px;background:#4ade80;color:#052e14;font-weight:600;font-size:17px;margin-bottom:10px">Reload</button>
+      <button id="boot-reset" style="display:block;width:100%;min-height:52px;border:1px solid #374151;border-radius:12px;background:transparent;color:#e5e7eb;font-size:17px">Reset app</button>
+      <p style="color:#9ca3af;font-size:13px;margin:16px 0 4px">What went wrong (send this to Claude):</p>
+      <pre id="boot-error" style="white-space:pre-wrap;font-size:12px;color:#fca5a5;margin:0"></pre>
+    </div>
+    <script>
+      ;(function () {
+        var errors = []
+        function note(msg) { if (msg && errors.length < 5) errors.push(String(msg)) }
+        window.addEventListener('error', function (e) {
+          var src = e.target && (e.target.src || e.target.href)
+          if (src && !e.message) note('Could not load ' + src.split('/').pop() + ' (the app may have just updated: try Reset app)')
+          else note((e.message || 'Error') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : ''))
+        }, true)
+        window.addEventListener('unhandledrejection', function (e) { note(e.reason && (e.reason.stack || e.reason.message) || e.reason) })
+        window.__showBootHelp = function (msg) {
+          note(msg)
+          var help = document.getElementById('boot-help')
+          document.getElementById('boot-error').textContent = (errors.join('\n\n') || 'Nothing was drawn after 8 seconds.') + '\n\n' + navigator.userAgent
+          help.hidden = false
+        }
+        setTimeout(function () { if (!document.getElementById('root').hasChildNodes()) window.__showBootHelp() }, 8000)
+        document.getElementById('boot-reload').onclick = function () { location.reload() }
+        document.getElementById('boot-reset').onclick = function () {
+          var jobs = []
+          if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister() })) }))
+          if (window.caches) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k) })) }))
+          Promise.all(jobs).catch(function () {}).then(function () { location.replace('/') })
+        }
+      })()
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router'
 import { AuthProvider } from '@/auth/AuthProvider'
 import { ConfirmProvider } from '@/components/ConfirmProvider'
+import { ErrorBoundary, RouteError } from '@/components/ErrorBoundary'
 import { RequireAuth } from '@/auth/RequireAuth'
 import { AppLayout } from '@/components/AppLayout'
 import { DataProvider } from '@/data/DataProvider'
@@ -28,10 +29,20 @@ import { WorkoutScreen } from '@/screens/WorkoutScreen'
 const ExerciseProgressScreen = lazy(() => import('@/screens/ExerciseProgressScreen'))
 import './index.css'
 
+// A lazily loaded part of the app (charts, barcode reader) from an older version can be gone after an update:
+// reload once to get the current version instead of failing.
+window.addEventListener('vite:preloadError', () => {
+  if (sessionStorage.getItem('reloadedForUpdate')) return
+  sessionStorage.setItem('reloadedForUpdate', '1')
+  location.reload()
+})
+setTimeout(() => sessionStorage.removeItem('reloadedForUpdate'), 15_000) // started fine: allow it again next update
+
 const router = createBrowserRouter([
-  { path: '/sign-in', element: <SignInScreen /> },
+  { path: '/sign-in', element: <SignInScreen />, errorElement: <RouteError /> },
   {
     element: <RequireAuth />,
+    errorElement: <RouteError />,
     children: [
       {
         element: (
@@ -78,10 +89,12 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
-      <ConfirmProvider>
-        <RouterProvider router={router} />
-      </ConfirmProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ConfirmProvider>
+          <RouterProvider router={router} />
+        </ConfirmProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )
